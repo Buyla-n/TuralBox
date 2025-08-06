@@ -32,6 +32,9 @@
         <activity
             android:name=".AppExtractActivity"
             android:exported="true" />
+        <activity
+            android:name=".OpenSourceActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

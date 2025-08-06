@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
 import android.view.MotionEvent
@@ -62,6 +63,7 @@ import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -86,6 +88,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -114,7 +118,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.tural.box.AppExtractActivity
@@ -131,6 +142,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
+import androidx.core.net.toUri
+import com.tural.box.OpenSourceActivity
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class,
     ExperimentalLayoutApi::class
@@ -146,6 +159,7 @@ fun TuralApp(
     var showSortDialog by remember { mutableStateOf(false) }
     var showCreateFileDialog by remember { mutableStateOf(false) }
     var showSearchDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
     var checkedFile by remember { mutableStateOf<File?>(null) }
     var leftHighLightFiles by remember { mutableStateOf(emptyList<String>()) }
     var rightHighLightFiles by remember { mutableStateOf(emptyList<String>()) }
@@ -237,19 +251,25 @@ fun TuralApp(
                     modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
                     Spacer(Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(Modifier.width(8.dp))
-                        Image(
-                            painter = painterResource(R.drawable.ic_launcher_static),
-                            contentDescription = null,
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Text(
-                            "TuralBox",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp),
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    }
+
+                    NavigationDrawerItem(
+                        label = {
+                            Text(
+                                "TuralBox",
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        },
+                        selected = false,
+                        badge = {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = null
+                            )
+                        },
+                        onClick = {
+                            showAboutDialog = true
+                        }
+                    )
                     HorizontalDivider()
 
                     Text("存储", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
@@ -1424,6 +1444,13 @@ fun TuralApp(
                         }
                     },
                     confirmButton = {
+                        OutlinedButton(
+                            onClick = {
+
+                            }
+                        ) {
+                            Text("查看")
+                        }
                         Button(
                             onClick = {
 
@@ -1433,46 +1460,112 @@ fun TuralApp(
                         }
                     },
                     dismissButton = {
-//                        Row(Modifier.width(150.dp)) {
-//                            OutlinedIconButton(
-//                                onClick = {
-//                                    context.startActivity(Intent(Intent.ACTION_DELETE)
-//                                        .apply {
-//                                            data = Uri.fromParts("package", app.packageName, null)
-//                                        }
-//                                    )
-//                                }
-//                            ) {
-//                                Icon(imageVector = Icons.Outlined.Delete, contentDescription = null)
-//                            }
-//                            OutlinedIconButton(
-//                                onClick = {
-//                                    context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-//                                        .apply {
-//                                            data = Uri.fromParts("package", app.packageName, null)
-//                                        }
-//                                    )
-//                                }
-//                            ) {
-//                                Icon(imageVector = Icons.Outlined.Info, contentDescription = null)
-//                            }
-//                            OutlinedIconButton(
-//                                onClick = {
-//                                    try {
-//                                        context.startActivity(pm.getLaunchIntentForPackage(app.packageName))
-//                                    } catch (_: NullPointerException) {
-//                                        Toast.makeText(context, "应用没有主活动", Toast.LENGTH_SHORT).show()
-//                                    }
-//                                }
-//                            ) {
-//                                Icon(imageVector = Icons.AutoMirrored.Outlined.Launch, contentDescription = null)
-//                            }
-//                        }
+                        Row(Modifier.width(60.dp)) {
+                            OutlinedIconButton(
+                                onClick = {
+
+                                }
+                            ) {
+                                Icon(imageVector = Icons.Default.MoreVert, null)
+                            }
+                        }
                     }
                 )
             }
+
+            if (showAboutDialog)
+                BasicAlertDialog(
+                    onDismissRequest = { showAboutDialog = false },
+                    content = {
+                        Surface(
+                            shape = MaterialTheme.shapes.extraLarge,
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            modifier = Modifier.width(280.dp)
+                        ) {
+                            Column(Modifier.padding(18.dp)) {
+                                Row(
+                                    modifier = Modifier.padding(bottom = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+
+                                    Image(
+                                        painter = painterResource(R.drawable.ic_launcher_static),
+                                        contentDescription = "App icon",
+                                        modifier = Modifier.size(48.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.width(16.dp))
+
+                                    Column {
+                                        Text(
+                                            text = "TuralBox",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            softWrap = false,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.widthIn(max = 160.dp)
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            text = "0.0.1 (SnapShot)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                }
+                                LinkText(
+                                    "软件所用的",
+                                    {
+                                        val intent = Intent(context, OpenSourceActivity::class.java)
+                                        context.startActivity(intent)
+                                    },
+                                    "开源库",
+                                )
+                                LinkText(
+                                    "加入我们的",
+                                    {
+                                        val intent = Intent(Intent.ACTION_VIEW, context.getString(R.string.qq_group_link).toUri())
+                                        context.startActivity(intent)
+                                    },
+                                    "QQ 群聊",
+                                )
+
+                            }
+                        }
+                    }
+                )
         }
     }
+}
+
+@Composable
+fun LinkText(
+    start: String,
+    onClick: () -> Unit,
+    linkName: String
+) {
+    Text(
+        buildAnnotatedString {
+            append(start)
+
+            withLink(
+                LinkAnnotation.Clickable(
+                    tag = "1",
+                    styles = TextLinkStyles(
+                        SpanStyle(
+                            color = MaterialTheme.colorScheme.primary,
+                            textDecoration = TextDecoration.Underline
+                        )
+                    ),
+                    linkInteractionListener = {
+                        onClick()
+                    },
+                )
+
+            ) {
+                append(linkName)
+            }
+        }
+    )
 }
 
 data class PackageInfo(
