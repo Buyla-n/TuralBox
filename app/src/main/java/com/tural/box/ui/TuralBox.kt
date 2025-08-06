@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
 import android.view.MotionEvent
@@ -63,7 +62,6 @@ import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -103,6 +101,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -125,11 +124,12 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.tural.box.AppExtractActivity
 import com.tural.box.ImageActivity
+import com.tural.box.OpenSourceActivity
 import com.tural.box.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -142,8 +142,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
-import androidx.core.net.toUri
-import com.tural.box.OpenSourceActivity
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class,
     ExperimentalLayoutApi::class
@@ -153,7 +151,7 @@ fun TuralApp(
     context: Context
 ) {
     val scope = rememberCoroutineScope()
-    var checkedPosition by remember { mutableStateOf(CheckedType.LEFT) }
+    var paneType by remember { mutableStateOf(PaneType.LEFT) }
     var checkedPath by remember { mutableStateOf(Path(RootPath)) }
     var showToolDialog by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
@@ -163,6 +161,8 @@ fun TuralApp(
     var checkedFile by remember { mutableStateOf<File?>(null) }
     var leftHighLightFiles by remember { mutableStateOf(emptyList<String>()) }
     var rightHighLightFiles by remember { mutableStateOf(emptyList<String>()) }
+    var leftSelectedFiles by remember { mutableStateOf(emptyList<String>()) }
+    var rightSelectedFiles by remember { mutableStateOf(emptyList<String>()) }
     var leftPath by remember { mutableStateOf(Path(RootPath)) }
     var rightPath by remember { mutableStateOf(Path(RootPath)) }
     var leftFiles by remember { mutableStateOf(emptyList<File>()) }
@@ -175,8 +175,15 @@ fun TuralApp(
     var rightSortOrder by remember { mutableStateOf(SortOrder.NAME) }
     var showAppDetailDialog by remember { mutableStateOf(false) }
 
+    val panes = remember {
+        mutableStateMapOf(
+            PaneType.LEFT to PaneState(),
+            PaneType.RIGHT to PaneState()
+        )
+    }
+
     fun handleBack() {
-        if (checkedPosition == CheckedType.LEFT) {
+        if (paneType == PaneType.LEFT) {
             if (!leftPath.isRootPath()) leftPath = leftPath.parent
         } else {
             if (!rightPath.isRootPath()) rightPath = rightPath.parent
@@ -185,7 +192,7 @@ fun TuralApp(
 
     fun handleRefresh() {
         scope.launch(Dispatchers.IO) {
-            if (checkedPosition == CheckedType.LEFT) {
+            if (paneType == PaneType.LEFT) {
                 leftFiles = accessFiles(leftPath, leftSortOrder)
             } else {
                 rightFiles = accessFiles(rightPath, rightSortOrder)
@@ -216,7 +223,7 @@ fun TuralApp(
     fun setPath(
         path: Path
     ) {
-        if (checkedPosition == CheckedType.LEFT) {
+        if (paneType == PaneType.LEFT) {
             leftPath = path
         } else {
             rightPath = path
@@ -224,7 +231,7 @@ fun TuralApp(
     }
 
     BackHandler(
-        enabled = if (checkedPosition == CheckedType.LEFT) {
+        enabled = if (paneType == PaneType.LEFT) {
             !leftPath.isRootPath()
         } else {
             !rightPath.isRootPath()
@@ -495,7 +502,7 @@ fun TuralApp(
                             }
                             IconButton(onClick = {
                                 scope.launch {
-                                    if (checkedPosition == CheckedType.LEFT) {
+                                    if (paneType == PaneType.LEFT) {
                                         rightPath = leftPath
                                     } else {
                                         leftPath = rightPath
@@ -503,7 +510,7 @@ fun TuralApp(
                                 }
                             }) {
                                 Icon(
-                                    if (checkedPosition == CheckedType.LEFT) Icons.AutoMirrored.Filled.Redo else Icons.AutoMirrored.Filled.Undo,
+                                    if (paneType == PaneType.LEFT) Icons.AutoMirrored.Filled.Redo else Icons.AutoMirrored.Filled.Undo,
                                     contentDescription = null,
                                 )
                             }
@@ -567,9 +574,9 @@ fun TuralApp(
                     }
                 }
 
-                LaunchedEffect(leftPath, rightPath, checkedPosition) {
+                LaunchedEffect(leftPath, rightPath, paneType) {
                     scope.launch(Dispatchers.Default) {
-                        checkedPath = if (checkedPosition == CheckedType.LEFT) {
+                        checkedPath = if (paneType == PaneType.LEFT) {
                             leftPath
                         } else {
                             rightPath
@@ -583,7 +590,7 @@ fun TuralApp(
                 }
 
                 val animatedColorLeft by animateColorAsState(
-                    targetValue = if (checkedPosition == CheckedType.LEFT) MaterialTheme.colorScheme.surface else colorWhite,
+                    targetValue = if (paneType == PaneType.LEFT) MaterialTheme.colorScheme.surface else colorWhite,
                     animationSpec = tween(150)
                 )
 
@@ -606,7 +613,7 @@ fun TuralApp(
                             .background(color = animatedColorLeft)
                             .pointerInteropFilter { event ->
                                 if (event.action == MotionEvent.ACTION_DOWN) {
-                                    checkedPosition = CheckedType.LEFT
+                                    paneType = PaneType.LEFT
                                 }
                                 false
                             },
@@ -623,16 +630,33 @@ fun TuralApp(
                                 itemData = FileItemData(
                                     file = file,
                                     type = getFileType(file),
-                                    highLight = leftHighLightFiles.any { it == file.name }),
-                                onFileClick = { handleFileClick(file = it, isLeftPane = true) },
-                                onFileLongClick = { handleFileLongClick(it) }
+                                    highLight = leftHighLightFiles.any { it == file.name },
+                                    selected = leftSelectedFiles.any { it == file.name }
+                                ),
+                                onFileClick = { file ->
+                                    if (leftSelectedFiles.isEmpty()) {
+                                        handleFileClick(file = file, isLeftPane = true)
+                                    } else {
+                                        leftSelectedFiles = if (leftSelectedFiles.any { it == file.name }) {
+                                            leftSelectedFiles - file.name
+                                        } else {
+                                            leftSelectedFiles + file.name
+                                        }
+                                    }
+                                },
+                                onFileLongClick = { handleFileLongClick(it) },
+                                onCheck = { checkFile ->
+                                    if (!leftSelectedFiles.any { it == checkFile.name }) {
+                                        leftSelectedFiles += checkFile.name
+                                    }
+                                }
                             )
                         }
                     }
                 }
 
                 val animatedColorRight by animateColorAsState(
-                    targetValue = if (checkedPosition == CheckedType.RIGHT) MaterialTheme.colorScheme.surface else colorWhite,
+                    targetValue = if (paneType == PaneType.RIGHT) MaterialTheme.colorScheme.surface else colorWhite,
                     animationSpec = tween(150)
                 )
 
@@ -655,7 +679,7 @@ fun TuralApp(
                             .background(color = animatedColorRight)
                             .pointerInteropFilter { event ->
                                 if (event.action == MotionEvent.ACTION_DOWN) {
-                                    checkedPosition = CheckedType.RIGHT
+                                    paneType = PaneType.RIGHT
                                 }
                                 false
                             },
@@ -703,8 +727,8 @@ fun TuralApp(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(
-                                            start = 24.dp,
-                                            end = 24.dp,
+                                            start = 20.dp,
+                                            end = 20.dp,
                                             bottom = 24.dp,
                                             top = 16.dp
                                         ),
@@ -714,10 +738,12 @@ fun TuralApp(
                                     fun ToolItem(
                                         text: String,
                                         icon: ImageVector,
-                                        onClick: () -> Unit
+                                        onClick: () -> Unit,
+                                        enabled: Boolean = true
                                     ) {
                                         Surface(
-                                            modifier = Modifier.weight(1f),
+                                            enabled = enabled,
+                                            modifier = Modifier.width(128.dp),
                                             onClick = onClick,
                                             shape = ButtonDefaults.shape,
                                             color = Color.Transparent
@@ -734,13 +760,13 @@ fun TuralApp(
                                     }
 
                                     ToolItem(
-                                        text = if (checkedPosition == CheckedType.RIGHT) "<-复制" else "复制->",
+                                        text = if (paneType == PaneType.RIGHT) "<-复制" else "复制->",
                                         icon = Icons.Default.ContentCopy,
                                         onClick = { /* 复制操作 */ }
                                     )
 
                                     ToolItem(
-                                        text = if (checkedPosition == CheckedType.RIGHT) "<-移动" else "移动->",
+                                        text = if (paneType == PaneType.RIGHT) "<-移动" else "移动->",
                                         icon = Icons.AutoMirrored.Filled.DriveFileMove,
                                         onClick = { /* 移动操作 */ }
                                     )
@@ -784,7 +810,11 @@ fun TuralApp(
                                     ToolItem(
                                         text = "分享",
                                         icon = Icons.Default.Share,
-                                        onClick = { /* 分享操作 */ }
+                                        onClick = {
+                                            context.shareFile(checkedFile!!)
+                                            showToolDialog = false
+                                        },
+                                        enabled = !checkedFile!!.isDirectory
                                     )
                                 }
                             }
@@ -999,7 +1029,7 @@ fun TuralApp(
             }
 
             if (showSortDialog) {
-                val isLeft = checkedPosition == CheckedType.LEFT
+                val isLeft = paneType == PaneType.LEFT
                 var selectedSortOption by remember { mutableStateOf(SortOrder.NAME) } // 0=名称, 1=大小, 2=时间, 3=类型
                 selectedSortOption = if (isLeft) leftSortOrder else rightSortOrder
 
@@ -1278,11 +1308,11 @@ fun TuralApp(
                                             onFileClick = {
                                                 handleFileClick(
                                                     file = file,
-                                                    isLeftPane = checkedPosition == CheckedType.LEFT
+                                                    isLeftPane = paneType == PaneType.LEFT
                                                 )
                                             },
                                             onFileLongClick = {
-                                                if (checkedPosition == CheckedType.LEFT) {
+                                                if (paneType == PaneType.LEFT) {
                                                     leftHighLightFiles = listOf(file.name)
                                                     leftPath = Path(file.path)
                                                 } else {
@@ -1537,6 +1567,14 @@ fun TuralApp(
     }
 }
 
+data class PaneState(
+    val path: Path = Path(RootPath),
+    val files: List<File> = emptyList(),
+    val highlightFiles: List<String> = emptyList(),
+    val selectedFiles: List<String> = emptyList(),
+    val sortOrder: SortOrder = SortOrder.NAME
+)
+
 @Composable
 fun LinkText(
     start: String,
@@ -1579,7 +1617,7 @@ data class PackageInfo(
     val icon: Drawable
 )
 
-enum class CheckedType {
+enum class PaneType {
     LEFT,
     RIGHT
 }
@@ -1598,4 +1636,4 @@ enum class SortOrder {
     SIZE,
     TIME,
     TYPE
-}
+} //1623!!!

@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.tural.box.ui.OpenSourceScreen
+import com.tural.box.ui.theme.TuralBoxTheme
 
 class OpenSourceActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -12,7 +13,9 @@ class OpenSourceActivity : ComponentActivity() {
         enableEdgeToEdge()
         window.isNavigationBarContrastEnforced = false
         setContent {
-            OpenSourceScreen(onBackPressed = { finish() })
+            TuralBoxTheme {
+                OpenSourceScreen(onBackPressed = { finish() })
+            }
         }
     }
 }
