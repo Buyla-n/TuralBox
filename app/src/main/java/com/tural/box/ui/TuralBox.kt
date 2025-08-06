@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
 import android.view.MotionEvent
@@ -63,7 +62,6 @@ import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -95,6 +93,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -125,12 +124,14 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.tural.box.AppExtractActivity
 import com.tural.box.ImageActivity
+import com.tural.box.OpenSourceActivity
 import com.tural.box.R
+import com.tural.box.decoder.axml.AXMLPrinter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
@@ -142,8 +143,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
-import androidx.core.net.toUri
-import com.tural.box.OpenSourceActivity
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class,
     ExperimentalLayoutApi::class
@@ -160,6 +159,7 @@ fun TuralApp(
     var showCreateFileDialog by remember { mutableStateOf(false) }
     var showSearchDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showSthDialog by remember { mutableStateOf(false) }
     var checkedFile by remember { mutableStateOf<File?>(null) }
     var leftHighLightFiles by remember { mutableStateOf(emptyList<String>()) }
     var rightHighLightFiles by remember { mutableStateOf(emptyList<String>()) }
@@ -207,6 +207,10 @@ fun TuralApp(
                 FileType.INSTALL -> {
                     checkedFile = file
                     showAppDetailDialog = true
+                }
+                FileType.XML -> {
+                    checkedFile = file
+                    showSthDialog = true
                 }
                 else -> {}
             }
@@ -345,18 +349,14 @@ fun TuralApp(
         Scaffold(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
-                CenterAlignedTopAppBar(
+                TopAppBar(
                     title = {
-                        Column(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = checkedPath.pathString,
-                                maxLines = 1,
-                                overflow = TextOverflow.StartEllipsis,
-                                softWrap = false
-                            )
-                        }
+                        Text(
+                            text = checkedPath.pathString,
+                            maxLines = 1,
+                            overflow = TextOverflow.StartEllipsis,
+                            softWrap = false
+                        )
                     },
                     navigationIcon = {
                         IconButton(
@@ -623,9 +623,12 @@ fun TuralApp(
                                 itemData = FileItemData(
                                     file = file,
                                     type = getFileType(file),
-                                    highLight = leftHighLightFiles.any { it == file.name }),
-                                onFileClick = { handleFileClick(file = it, isLeftPane = true) },
-                                onFileLongClick = { handleFileLongClick(it) }
+                                    highLight = leftHighLightFiles.any { it == file.name },
+                                ),
+                                onFileClick = { file ->
+                                    handleFileClick(file = file, isLeftPane = true)
+                                },
+                                onFileLongClick = { handleFileLongClick(it) },
                             )
                         }
                     }
@@ -703,8 +706,8 @@ fun TuralApp(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(
-                                            start = 24.dp,
-                                            end = 24.dp,
+                                            start = 20.dp,
+                                            end = 20.dp,
                                             bottom = 24.dp,
                                             top = 16.dp
                                         ),
@@ -714,10 +717,12 @@ fun TuralApp(
                                     fun ToolItem(
                                         text: String,
                                         icon: ImageVector,
-                                        onClick: () -> Unit
+                                        onClick: () -> Unit,
+                                        enabled: Boolean = true
                                     ) {
                                         Surface(
-                                            modifier = Modifier.weight(1f),
+                                            enabled = enabled,
+                                            modifier = Modifier.width(128.dp),
                                             onClick = onClick,
                                             shape = ButtonDefaults.shape,
                                             color = Color.Transparent
@@ -784,7 +789,11 @@ fun TuralApp(
                                     ToolItem(
                                         text = "分享",
                                         icon = Icons.Default.Share,
-                                        onClick = { /* 分享操作 */ }
+                                        onClick = {
+                                            context.shareFile(checkedFile!!)
+                                            showToolDialog = false
+                                        },
+                                        enabled = !checkedFile!!.isDirectory
                                     )
                                 }
                             }
@@ -1533,6 +1542,18 @@ fun TuralApp(
                         }
                     }
                 )
+            if (showSthDialog) {
+                AlertDialog(
+                    onDismissRequest = { showSthDialog = false },
+                    confirmButton = {},
+                    text = {
+                        val pt = AXMLPrinter.main(arrayOf(checkedFile!!.path))
+                        Text(
+                            pt.toString()
+                        )
+                    }
+                )
+            }
         }
     }
 }

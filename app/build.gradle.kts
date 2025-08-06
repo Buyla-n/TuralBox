@@ -68,4 +68,5 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.coil.compose)
     implementation("com.jvziyaoyao.scale:image-viewer:1.1.1-beta.2")
+
 }

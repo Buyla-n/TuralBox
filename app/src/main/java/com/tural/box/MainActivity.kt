@@ -7,6 +7,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.tural.box.decoder.axml.AXMLPrinter
 import com.tural.box.ui.TuralApp
 import com.tural.box.ui.theme.TuralBoxTheme
 

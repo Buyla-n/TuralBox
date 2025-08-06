@@ -1,5 +1,8 @@
 package com.tural.box.ui
 
+import android.content.Context
+import android.content.Intent
+import android.webkit.MimeTypeMap
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Android
@@ -10,12 +13,14 @@ import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import java.io.File
 import java.io.IOException
+import java.net.URLConnection
 import java.nio.file.Path
 import kotlin.io.path.pathString
 
@@ -61,11 +66,12 @@ fun accessFiles(path: Path, sortOrder: SortOrder): List<File> {
 fun getFileType(file: File): FileType {
     return if (file.isDirectory) FileType.FOLDER else when (file.extension.lowercase()) {
         "txt" -> FileType.TEXT
-        "jpg", "jpeg", "png", "gif" -> FileType.IMAGE
+        "jpg", "jpeg", "png", "gif", "webp" -> FileType.IMAGE
         "mp3", "wav" -> FileType.AUDIO
         "mp4" -> FileType.VIDEO
         "sh" -> FileType.SHELL
         "apk" -> FileType.INSTALL
+        "xml" -> FileType.XML
         "zip", "rar", "7z" -> FileType.PACKAGE
         else -> FileType.FILE
     }
@@ -186,6 +192,29 @@ fun createFolder(directory: Path, folderName: String): Boolean {
         return folder.mkdir()
     } catch (_: IOException) {
         return false
+    }
+}
+
+fun getMimeType(file: File): String {
+    val extension = MimeTypeMap.getFileExtensionFromUrl(file.path)
+    val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+    return mimeType ?: URLConnection.guessContentTypeFromName(file.name) ?: "*/*"
+}
+
+fun Context.shareFile(file: File) {
+    val mimeType = getMimeType(file)
+    val uri = FileProvider.getUriForFile(
+        this,
+        "${applicationContext.packageName}.fileprovider",
+        file
+    )
+
+    Intent(Intent.ACTION_SEND).apply {
+        type = mimeType
+        putExtra(Intent.EXTRA_STREAM, uri)
+        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+    }.also { intent ->
+        startActivity(Intent.createChooser(intent, "分享文件"))
     }
 }
 
