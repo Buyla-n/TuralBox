@@ -4,26 +4,18 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxState
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,68 +28,53 @@ import java.io.File
 fun FileItem(
     itemData: FileItemData,
     onFileClick: (File) -> Unit,
-    onFileLongClick: (File) -> Unit,
-    onCheck: (File) -> Unit = {}
+    onFileLongClick: (File) -> Unit
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            if (it == SwipeToDismissBoxValue.StartToEnd || it == SwipeToDismissBoxValue.EndToStart) {
-                onCheck(itemData.file)
-            }
-            false
-        }
-    )
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {
-        }
-    ) {
-        Row(
-            modifier = Modifier
-                .background(
-                    color = if (!itemData.selected) Color.Transparent else MaterialTheme.colorScheme.primaryContainer
-                )
-                .combinedClickable(
-                    onClick = {
-                        onFileClick(itemData.file)
-                    },
-                    onLongClick = {
-                        onFileLongClick(itemData.file)
-                    }
-                )
-                .fillMaxWidth()
-                .padding(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val icon = getFileIcon(itemData.type)
-
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .border(
-                        width = 1.dp,
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    )
-                    .padding(4.dp)
+    Row(
+        modifier = Modifier
+            .background(
+                color = if (!itemData.selected) Color.Transparent else MaterialTheme.colorScheme.primaryContainer
             )
+            .combinedClickable(
+                onClick = {
+                    onFileClick(itemData.file)
+                },
+                onLongClick = {
+                    onFileLongClick(itemData.file)
+                }
+            )
+            .fillMaxWidth()
+            .padding(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val icon = getFileIcon(itemData.type)
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Column {
-                Text(
-                    text = itemData.file.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = if (!itemData.highLight) Color.Unspecified else MaterialTheme.colorScheme.primary
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .border(
+                    width = 1.dp,
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.primaryContainer
                 )
-                if (itemData.file.isFile)
-                    Text(
-                        text = formatFileSize(itemData.file.length()),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-            }
+                .padding(4.dp)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Column {
+            Text(
+                text = itemData.file.name,
+                style = MaterialTheme.typography.titleSmall,
+                color = if (!itemData.highLight) Color.Unspecified else MaterialTheme.colorScheme.primary
+            )
+            if (itemData.file.isFile)
+                Text(
+                    text = formatFileSize(itemData.file.length()),
+                    style = MaterialTheme.typography.bodySmall
+                )
         }
     }
 }
