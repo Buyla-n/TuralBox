@@ -3,17 +3,8 @@ package com.tural.box.ui
 import android.content.Context
 import android.content.Intent
 import android.webkit.MimeTypeMap
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.Android
-import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.FolderZip
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.VideoFile
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.content.FileProvider
+import com.tural.box.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -27,19 +18,18 @@ import kotlin.io.path.pathString
 const val RootPath = "/storage/emulated/0"
 const val ExtractPath = "/storage/emulated/0/TuralBox/Extract"
 
-fun getFileIcon(type: FileType) : ImageVector {
-    val icon = Icons.Default
+fun getFileIcon(type: FileType) : Int {
     return when(type) {
-        FileType.FOLDER -> icon.Folder
-        FileType.TEXT -> icon.Description
-        FileType.AUDIO -> icon.AudioFile
-        FileType.IMAGE -> icon.Image
-        FileType.VIDEO -> icon.VideoFile
-        FileType.PACKAGE -> icon.FolderZip
-        FileType.INSTALL -> icon.Android
-        FileType.XML -> icon.Description
-        FileType.SHELL -> icon.Description
-        else -> Icons.AutoMirrored.Filled.InsertDriveFile
+        FileType.FOLDER -> R.drawable.outline_folder_24
+        FileType.TEXT -> R.drawable.outline_description_24
+        FileType.AUDIO -> R.drawable.outline_audio_file_24
+        FileType.IMAGE -> R.drawable.outline_image_24
+        FileType.VIDEO -> R.drawable.outline_video_file_24
+        FileType.PACKAGE -> R.drawable.outline_folder_zip_24
+        FileType.INSTALL -> R.drawable.outline_android_24
+        FileType.XML -> R.drawable.outline_description_24
+        FileType.SHELL -> R.drawable.outline_description_24
+        else -> R.drawable.outline_insert_drive_file_24
     }
 }
 

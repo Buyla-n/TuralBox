@@ -7,10 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChangeCircle
-import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,11 +25,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.jvziyaoyao.scale.zoomable.zoomable.ZoomableView
 import com.jvziyaoyao.scale.zoomable.zoomable.rememberZoomableState
+import com.tural.box.R
 import java.io.File
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -73,7 +71,7 @@ fun ImageViewer(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(R.drawable.outline_arrow_back_24),
                             contentDescription = null
                         )
                     }
@@ -85,7 +83,7 @@ fun ImageViewer(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ColorLens,
+                            painter = painterResource(R.drawable.outline_colors_24),
                             contentDescription = null
                         )
                     }

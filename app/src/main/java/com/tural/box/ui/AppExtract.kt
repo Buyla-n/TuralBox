@@ -31,14 +31,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.Launch
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -72,11 +64,13 @@ import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.tural.box.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -167,7 +161,7 @@ fun AppExtract(){
                         onClick = { (context as ComponentActivity).finish() }
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(R.drawable.outline_arrow_back_24),
                             contentDescription = null
                         )
                     }
@@ -183,7 +177,7 @@ fun AppExtract(){
                         }
                     ) {
                         Icon(
-                            imageVector = if (searchActive) Icons.Default.Close else Icons.Default.Search,
+                            painter = painterResource(if (searchActive) R.drawable.outline_close_24 else R.drawable.outline_search_24),
                             contentDescription = null
                         )
                     }
@@ -192,7 +186,7 @@ fun AppExtract(){
                         onClick = {  }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            painter = painterResource(R.drawable.outline_more_vert_24),
                             contentDescription = null
                         )
                     }
@@ -394,7 +388,7 @@ fun AppExtract(){
                                     )
                                 }
                             ) {
-                                Icon(imageVector = Icons.Outlined.Delete, contentDescription = null)
+                                Icon(painter = painterResource(R.drawable.outline_delete_24), contentDescription = null)
                             }
                             OutlinedIconButton(
                                 onClick = {
@@ -405,7 +399,7 @@ fun AppExtract(){
                                     )
                                 }
                             ) {
-                                Icon(imageVector = Icons.Outlined.Info, contentDescription = null)
+                                Icon(painter = painterResource(R.drawable.outline_info_24), contentDescription = null)
                             }
                             OutlinedIconButton(
                                 onClick = {
@@ -416,7 +410,7 @@ fun AppExtract(){
                                     }
                                 }
                             ) {
-                                Icon(imageVector = Icons.AutoMirrored.Outlined.Launch, contentDescription = null)
+                                Icon(painter = painterResource(R.drawable.outline_open_in_browser_24), contentDescription = null)
                             }
                         }
                     }

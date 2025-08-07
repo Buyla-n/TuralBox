@@ -41,31 +41,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.DriveFileMove
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.Redo
-import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.automirrored.outlined.ExitToApp
-import androidx.compose.material.icons.automirrored.outlined.Sort
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.OpenInBrowser
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.BottomAppBar
@@ -265,7 +240,7 @@ fun TuralApp(
                         selected = false,
                         badge = {
                             Icon(
-                                imageVector = Icons.Outlined.Settings,
+                                painter = painterResource(R.drawable.outline_settings_24),
                                 contentDescription = null
                             )
                         },
@@ -310,7 +285,7 @@ fun TuralApp(
                         selected = true,
                         icon = {
                             Icon(
-                                imageVector = Icons.Default.Storage,
+                                painter = painterResource(R.drawable.outline_storage_24),
                                 contentDescription = null
                             )
                         },
@@ -328,7 +303,7 @@ fun TuralApp(
                     NavigationDrawerItem(
                         label = { Text("软件提取") },
                         selected = false,
-                        icon = { Icon(Icons.Outlined.Archive, contentDescription = null) },
+                        icon = { Icon(painterResource(R.drawable.outline_unarchive_24), contentDescription = null) },
                         onClick = {
                             context.startActivity(Intent(context, AppExtractActivity::class.java))
                         }
@@ -336,7 +311,7 @@ fun TuralApp(
                     NavigationDrawerItem(
                         label = { Text("终端模拟") },
                         selected = false,
-                        icon = { Icon(Icons.Outlined.Terminal, contentDescription = null) },
+                        icon = { Icon(painterResource(R.drawable.outline_terminal_24), contentDescription = null) },
                         onClick = { /* Handle click */ },
                     )
                     Spacer(Modifier.height(12.dp))
@@ -370,7 +345,7 @@ fun TuralApp(
                             }
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Menu,
+                                painter = painterResource(R.drawable.outline_menu_24),
                                 contentDescription = null
                             )
                         }
@@ -384,7 +359,7 @@ fun TuralApp(
                                 }
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.MoreVert,
+                                    painter = painterResource(R.drawable.outline_more_vert_24),
                                     contentDescription = null
                                 )
                             }
@@ -397,7 +372,7 @@ fun TuralApp(
                                     text = { Text("刷新") },
                                     leadingIcon = {
                                         Icon(
-                                            Icons.Outlined.Refresh,
+                                            painter = painterResource(R.drawable.outline_refresh_24),
                                             contentDescription = null
                                         )
                                     },
@@ -410,7 +385,7 @@ fun TuralApp(
                                     text = { Text("搜索") },
                                     leadingIcon = {
                                         Icon(
-                                            Icons.Outlined.Search,
+                                            painter = painterResource(R.drawable.outline_search_24),
                                             contentDescription = null
                                         )
                                     },
@@ -426,7 +401,7 @@ fun TuralApp(
                                     text = { Text("排序方式") },
                                     leadingIcon = {
                                         Icon(
-                                            Icons.AutoMirrored.Outlined.Sort,
+                                            painter = painterResource(R.drawable.outline_sort_24),
                                             contentDescription = null
                                         )
                                     },
@@ -442,7 +417,7 @@ fun TuralApp(
                                     text = { Text("设置") },
                                     leadingIcon = {
                                         Icon(
-                                            Icons.Outlined.Settings,
+                                            painter = painterResource(R.drawable.outline_settings_24),
                                             contentDescription = null
                                         )
                                     },
@@ -452,7 +427,7 @@ fun TuralApp(
                                     text = { Text("退出") },
                                     leadingIcon = {
                                         Icon(
-                                            Icons.AutoMirrored.Outlined.ExitToApp,
+                                            painter = painterResource(R.drawable.outline_exit_to_app_24),
                                             contentDescription = null
                                         )
                                     },
@@ -476,19 +451,19 @@ fun TuralApp(
                         ) {
                             IconButton(onClick = { /* do something */ }) {
                                 Icon(
-                                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                    painter = painterResource(R.drawable.outline_keyboard_arrow_left_24),
                                     contentDescription = null
                                 )
                             }
                             IconButton(onClick = { /* do something */ }) {
                                 Icon(
-                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    painter = painterResource(R.drawable.outline_keyboard_arrow_right_24),
                                     contentDescription = null,
                                 )
                             }
                             IconButton(onClick = { showCreateFileDialog = true }) {
                                 Icon(
-                                    Icons.Filled.Add,
+                                    painter = painterResource(R.drawable.outline_add_24),
                                     contentDescription = null,
                                 )
                             }
@@ -502,13 +477,13 @@ fun TuralApp(
                                 }
                             }) {
                                 Icon(
-                                    if (checkedPosition == CheckedType.LEFT) Icons.AutoMirrored.Filled.Redo else Icons.AutoMirrored.Filled.Undo,
+                                    painterResource(R.drawable.outline_arrow_range_24),
                                     contentDescription = null,
                                 )
                             }
                             IconButton(onClick = { handleBack() }) {
                                 Icon(
-                                    Icons.Filled.ArrowUpward,
+                                    painter = painterResource(R.drawable.outline_arrow_upward_24),
                                     contentDescription = null,
                                 )
                             }
@@ -715,7 +690,7 @@ fun TuralApp(
                                     @Composable
                                     fun ToolItem(
                                         text: String,
-                                        icon: ImageVector,
+                                        icon: Int,
                                         onClick: () -> Unit,
                                         enabled: Boolean = true
                                     ) {
@@ -728,7 +703,7 @@ fun TuralApp(
                                         ) {
                                             Row(Modifier.padding(8.dp)) {
                                                 Icon(
-                                                    imageVector = icon,
+                                                    painter = painterResource(icon),
                                                     contentDescription = null
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
@@ -739,25 +714,25 @@ fun TuralApp(
 
                                     ToolItem(
                                         text = if (checkedPosition == CheckedType.RIGHT) "<-复制" else "复制->",
-                                        icon = Icons.Default.ContentCopy,
+                                        icon = R.drawable.outline_file_copy_24,
                                         onClick = { /* 复制操作 */ }
                                     )
 
                                     ToolItem(
                                         text = if (checkedPosition == CheckedType.RIGHT) "<-移动" else "移动->",
-                                        icon = Icons.AutoMirrored.Filled.DriveFileMove,
+                                        icon = R.drawable.outline_drive_file_move_24,
                                         onClick = { /* 移动操作 */ }
                                     )
 
                                     ToolItem(
                                         text = "打开方式",
-                                        icon = Icons.Default.OpenInBrowser,
+                                        icon = R.drawable.outline_file_open_24,
                                         onClick = { /* 打开方式操作 */ }
                                     )
 
                                     ToolItem(
                                         text = "重命名",
-                                        icon = Icons.Default.Edit,
+                                        icon = R.drawable.outline_edit_24,
                                         onClick = {
                                             showRenameDialog = true
                                             showToolDialog = false
@@ -766,7 +741,7 @@ fun TuralApp(
 
                                     ToolItem(
                                         text = "删除",
-                                        icon = Icons.Default.Delete,
+                                        icon = R.drawable.outline_delete_24,
                                         onClick = {
                                             showDeleteDialog = true
                                             showToolDialog = false
@@ -775,19 +750,19 @@ fun TuralApp(
 
                                     ToolItem(
                                         text = "压缩",
-                                        icon = Icons.Default.Download,
+                                        icon = R.drawable.outline_archive_24,
                                         onClick = { /* 压缩操作 */ }
                                     )
 
                                     ToolItem(
                                         text = "属性",
-                                        icon = Icons.Default.Info,
+                                        icon = R.drawable.outline_info_24,
                                         onClick = { /* 属性操作 */ }
                                     )
 
                                     ToolItem(
                                         text = "分享",
-                                        icon = Icons.Default.Share,
+                                        icon = R.drawable.outline_share_24,
                                         onClick = {
                                             context.shareFile(checkedFile!!)
                                             showToolDialog = false
@@ -1474,7 +1449,7 @@ fun TuralApp(
 
                                 }
                             ) {
-                                Icon(imageVector = Icons.Default.MoreVert, null)
+                                Icon(painter = painterResource(R.drawable.outline_more_vert_24), null)
                             }
                         }
                     }
