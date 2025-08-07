@@ -15,6 +15,7 @@
  */
 package com.tural.box.decoder.axml;
 
+import static com.tural.box.decoder.axml.ChunkUtilKt.readCheckType;
 import static com.tural.box.decoder.axml.XmlPullParser.END_DOCUMENT;
 import static com.tural.box.decoder.axml.XmlPullParser.END_TAG;
 import static com.tural.box.decoder.axml.XmlPullParser.START_DOCUMENT;
@@ -35,8 +36,6 @@ import java.io.InputStream;
  * (2) Closed state, which parser obtains after open(), close(), or failed
  * call to next(). In this state methods return invalid values or throw exceptions.
  * <p>
- * TODO:
- * 	* check all methods in closed state
  *
  */
 public class AXmlResourceParser {
@@ -60,7 +59,6 @@ public class AXmlResourceParser {
 		m_reader.close();
 		m_reader=null;
 		m_strings=null;
-		m_resourceIDs=null;
 		m_namespaces.reset();
 		resetEventInfo();
 	}
@@ -185,7 +183,6 @@ public class AXmlResourceParser {
 
 		public void reset() {
 			m_dataLength=0;
-			m_count=0;
 			m_depth=0;
 		}
 
@@ -226,7 +223,6 @@ public class AXmlResourceParser {
 			m_data[offset+1]=uri;
 			m_data[offset+2]=count+1;
 			m_dataLength+=2;
-			m_count+=1;
 		}
 
 		public void pop() {
@@ -244,7 +240,6 @@ public class AXmlResourceParser {
 			offset-=(1+count*2);
 			m_data[offset]=count;
 			m_dataLength-=2;
-			m_count-=1;
 		}
 
 		public int getPrefix(int index) {
@@ -281,7 +276,6 @@ public class AXmlResourceParser {
 				return;
 			}
 			m_dataLength-=2+count*2;
-			m_count-=count;
 			m_depth-=1;
 		}
 
@@ -337,7 +331,6 @@ public class AXmlResourceParser {
 
 		private int[] m_data;
 		private int m_dataLength;
-		private int m_count;
 		private int m_depth;
 	}
 
@@ -358,15 +351,13 @@ public class AXmlResourceParser {
 		m_name=-1;
 		m_namespaceUri=-1;
 		m_attributes=null;
-		m_idAttribute=-1;
 		m_classAttribute=-1;
-		m_styleAttribute=-1;
 	}
 
 	private void doNext() throws IOException {
 		// Delayed initialization.
 		if (m_strings==null) {
-			ChunkUtil.INSTANCE.readCheckType(m_reader,CHUNK_AXML_FILE);
+			readCheckType(m_reader,CHUNK_AXML_FILE);
 			/*chunkSize*/m_reader.skipInt();
 			m_strings= StringBlock.read(m_reader);
 			m_namespaces.increaseDepth();
@@ -408,7 +399,7 @@ public class AXmlResourceParser {
 				if (chunkSize<8 || (chunkSize%4)!=0) {
 					throw new IOException("Invalid resource ids size ("+chunkSize+").");
 				}
-				m_resourceIDs=m_reader.readIntArray(chunkSize/4-2);
+				m_reader.readIntArray(chunkSize/4-2);
 				continue;
 			}
 
@@ -449,10 +440,8 @@ public class AXmlResourceParser {
 				m_name=m_reader.readInt();
 				/*flags?*/m_reader.skipInt();
 				int attributeCount=m_reader.readInt();
-				m_idAttribute=(attributeCount>>>16)-1;
 				attributeCount&=0xFFFF;
 				m_classAttribute=m_reader.readInt();
-				m_styleAttribute=(m_classAttribute>>>16)-1;
 				m_classAttribute=(m_classAttribute & 0xFFFF)-1;
 				m_attributes=m_reader.readIntArray(attributeCount*ATTRIBUTE_LENGHT);
 				for (int i=ATTRIBUTE_IX_VALUE_TYPE;i<m_attributes.length;) {
@@ -491,21 +480,15 @@ public class AXmlResourceParser {
 
 	private IntReader m_reader;
 	private boolean m_operational=false;
-
 	private StringBlock m_strings;
-	private int[] m_resourceIDs;
 	private final NamespaceStack m_namespaces=new NamespaceStack();
-
 	private boolean m_decreaseDepth;
-
 	private int m_event;
 	private int m_lineNumber;
 	private int m_name;
 	private int m_namespaceUri;
 	private int[] m_attributes;
-	private int m_idAttribute;
 	private int m_classAttribute;
-	private int m_styleAttribute;
 
 	private static final int
 		ATTRIBUTE_IX_NAMESPACE_URI	=0,

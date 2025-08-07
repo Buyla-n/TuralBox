@@ -24,58 +24,48 @@ import java.io.InputStream;
  * <p>
  * Simple helper class that allows reading of integers.
  * <p>
- * TODO:
- * 	* implement buffering
- *
  */
 public final class IntReader {
 
-	public IntReader(InputStream stream,boolean bigEndian) {
-		reset(stream,bigEndian);
+	public IntReader(InputStream stream, boolean bigEndian) {
+		reset(stream, bigEndian);
 	}
 
 	public void reset(InputStream stream, boolean bigEndian) {
-		m_stream=stream;
-		m_bigEndian=bigEndian;
+		m_stream = stream;
+		m_bigEndian = bigEndian;
 	}
 
 	public void close() {
-		if (m_stream==null) {
+		if (m_stream == null) {
 			return;
 		}
 		try {
 			m_stream.close();
+		} catch (IOException ignored) {
 		}
-		catch (IOException ignored) {
-		}
-		reset(null,false);
+		reset(null, false);
 	}
 
 	public int readInt() throws IOException {
-		return readInt(4);
-	}
-
-	public int readInt(int length) throws IOException {
-		if (length<0 || length>4) {
-			throw new IllegalArgumentException();
-		}
-		int result=0;
+		int length = 4;
+		int result = 0;
 		if (m_bigEndian) {
-			for (int i=(length-1)*8;i>=0;i-=8) {
-				int b=m_stream.read();
-				if (b==-1) {
+			for (int i = (length - 1) * 8; i >= 0; i -= 8) {
+				int b = m_stream.read();
+				if (b == -1) {
 					throw new EOFException();
 				}
-				result|=(b<<i);
+				result |= (b << i);
 			}
 		} else {
-			length*=8;
-			for (int i=0;i!=length;i+=8) {
-				int b=m_stream.read();
-				if (b==-1) {
+			length *= 8;
+			for (int i = 0; i != length; i += 8) {
+				int b = m_stream.read();
+				if (b == -1) {
 					throw new EOFException();
 				}
-				result|=(b<<i);
+				result |= (b << i);
 			}
 		}
 		return result;
@@ -93,18 +83,11 @@ public final class IntReader {
 		}
 	}
 
-	public void skip(int bytes) throws IOException {
-		if (bytes<=0) {
-			return;
-		}
-		long skipped=m_stream.skip(bytes);
-		if (skipped!=bytes) {
+	public void skipInt() throws IOException {
+		long skipped = m_stream.skip(4);
+		if (skipped != 4) {
 			throw new EOFException();
 		}
-	}
-
-	public void skipInt() throws IOException {
-		skip(4);
 	}
 
 	private InputStream m_stream;

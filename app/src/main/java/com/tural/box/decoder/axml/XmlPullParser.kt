@@ -1,18 +1,10 @@
-/* -*-             c-basic-offset: 4; indent-tabs-mode: nil; -*-  //------100-columns-wide------>|*/
-// for license please see accompanying LICENSE.txt file (available also at http://www.xmlpull.org/)
-
 package com.tural.box.decoder.axml;
 
-public interface XmlPullParser {
-
-    int START_DOCUMENT = 0;
-
-    int END_DOCUMENT = 1;
-
-    int START_TAG = 2;
-
-    int END_TAG = 3;
-
-    int TEXT = 4;
+object XmlPullParser {
+    const val START_DOCUMENT = 0
+    const val END_DOCUMENT = 1
+    const val START_TAG = 2
+    const val END_TAG = 3
+    const val TEXT = 4
 }
 
