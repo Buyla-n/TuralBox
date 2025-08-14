@@ -117,6 +117,7 @@ import com.tural.box.ImageActivity
 import com.tural.box.OpenSourceActivity
 import com.tural.box.R
 import com.tural.box.TerminalActivity
+import com.tural.box.TextEditorActivity
 import com.tural.box.decoder.axml.AXMLPrinter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -141,7 +142,6 @@ fun TuralApp(
     var currentPath by remember { mutableStateOf(Path(RootPath)) }
     var negativePath by remember { mutableStateOf(Path(RootPath)) }
     var currentFile by remember { mutableStateOf<File?>(null) }
-    var showSthDialog by remember { mutableStateOf(false) }
     val colorWhite = if (isSystemInDarkTheme()) Color.Black else Color.White
     val leftLazyState = rememberLazyListState()
     val rightLazyState = rememberLazyListState()
@@ -193,9 +193,10 @@ fun TuralApp(
         } else {
             currentFile = file
             when(getFileType(file)) {
+                FileType.TEXT -> context.startActivity(Intent(context, TextEditorActivity::class.java).putExtra("filePath", file.path))
                 FileType.IMAGE -> context.startActivity(Intent(context, ImageActivity::class.java).putExtra("filePath", file.path))
                 FileType.INSTALL -> { dialogManager.showAppDetail = true }
-                FileType.XML -> { showSthDialog = true }
+                FileType.XML -> context.startActivity(Intent(context, TextEditorActivity::class.java).putExtra("filePath", file.path))
                 FileType.AUDIO -> { dialogManager.showAudio = true }
                 else -> { dialogManager.showOpenMode = true }
             }
@@ -1735,21 +1736,6 @@ fun TuralApp(
 
                             }
                         }
-                    }
-                )
-            }
-            if (showSthDialog) {
-                AlertDialog(
-                    onDismissRequest = { showSthDialog = false },
-                    confirmButton = {},
-                    text = {
-                        val pt = AXMLPrinter.print(currentFile!!.path)
-                        Text(
-                            pt,
-                            modifier = Modifier
-                                .horizontalScroll(rememberScrollState())
-                                .verticalScroll(rememberScrollState())
-                        )
                     }
                 )
             }

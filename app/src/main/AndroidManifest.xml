@@ -38,6 +38,9 @@
             android:name=".OpenSourceActivity"
             android:exported="true" />
         <activity
+            android:name=".TextEditorActivity"
+            android:exported="true" />
+        <activity
             android:name=".TerminalActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustNothing"/>
