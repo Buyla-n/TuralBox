@@ -33,7 +33,10 @@ class StringBlock private constructor() {
 
 		@Throws(IOException::class)
 		fun read(reader: IntReader): StringBlock {
-			readCheckType(reader, CHUNK_TYPE)
+			val type = reader.readInt()
+			if (type != CHUNK_TYPE) {
+				throw IOException("Expected chunk type 0x${CHUNK_TYPE.toString(16)}, got 0x${type.toString(16)}")
+			}
 			val chunkSize = reader.readInt()
 			val stringCount = reader.readInt()
 			reader.skipInt()
@@ -52,13 +55,6 @@ class StringBlock private constructor() {
 			block.strings = reader.readIntArray(size / 4)
 
 			return block
-		}
-
-		private fun readCheckType(reader: IntReader, expectedType: Int) {
-			val type = reader.readInt()
-			if (type != expectedType) {
-				throw IOException("Expected chunk type 0x${expectedType.toString(16)}, got 0x${type.toString(16)}")
-			}
 		}
 
 		private fun getShort(array: IntArray, offset: Int): Int {

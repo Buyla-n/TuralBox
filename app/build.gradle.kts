@@ -67,5 +67,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.coil.compose)
     implementation(libs.image.viewer)
-
+    implementation(libs.androidx.media3.exoplayer)
 }

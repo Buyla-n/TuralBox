@@ -22,32 +22,36 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.tural.box.R
 import java.io.File
+import kotlin.io.path.pathString
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FileItem(
-    itemData: FileItemData,
+    file: File,
+    type: FileType,
+    highLight: Boolean = false,
+    selected: Boolean = false,
     onFileClick: (File) -> Unit,
     onFileLongClick: (File) -> Unit
 ) {
     Row(
         modifier = Modifier
             .background(
-                color = if (!itemData.selected) Color.Transparent else MaterialTheme.colorScheme.primaryContainer
+                color = if (!selected) Color.Transparent else MaterialTheme.colorScheme.primaryContainer
             )
             .combinedClickable(
                 onClick = {
-                    onFileClick(itemData.file)
+                    onFileClick(file)
                 },
                 onLongClick = {
-                    onFileLongClick(itemData.file)
+                    onFileLongClick(file)
                 }
             )
             .fillMaxWidth()
             .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val icon = getFileIcon(itemData.type)
+        val icon = getFileIcon(type)
 
         Icon(
             painter = painterResource(icon),
@@ -66,13 +70,13 @@ fun FileItem(
 
         Column {
             Text(
-                text = itemData.file.name,
+                text = file.name,
                 style = MaterialTheme.typography.titleSmall,
-                color = if (!itemData.highLight) Color.Unspecified else MaterialTheme.colorScheme.primary
+                color = if (!highLight) Color.Unspecified else MaterialTheme.colorScheme.primary
             )
-            if (itemData.file.isFile)
+            if (file.isFile)
                 Text(
-                    text = formatFileSize(itemData.file.length()),
+                    text = formatFileSize(file.length()),
                     style = MaterialTheme.typography.bodySmall
                 )
         }
@@ -81,11 +85,11 @@ fun FileItem(
 
 @Composable
 fun UpwardItem(
-    onFileClick: () -> Unit
+    cps: PanelStates
 ) {
     Surface(
         onClick = {
-            onFileClick()
+            if (cps.path.pathString != "/storage/emulated/0") cps.path = cps.path.parent
         },
         color = Color.Transparent
     ) {
@@ -123,13 +127,6 @@ fun UpwardItem(
         }
     }
 }
-
-data class FileItemData(
-    val file: File,
-    val type: FileType,
-    val highLight: Boolean = false,
-    val selected: Boolean = false
-)
 
 enum class FileType {
     FOLDER,

@@ -19,10 +19,6 @@ import java.io.FileInputStream
 
 /**
  * @author Dmitry Skiba
- * <p>
- * This is example usage of AXMLParser class.
- * 
- * Prints xml document from Android's binary xml file.
  */
 object AXMLPrinter {
 
@@ -34,14 +30,14 @@ object AXMLPrinter {
 
 	fun print(path: String): String {
 		if (path.isEmpty()) {
-			return "Usage: AXMLPrinter <binary xml file>"
+			return "Err: Path is empty"
         }
 		val result = StringBuilder()
 		try {
 			val parser= AXmlResourceParser()
 			parser.open( FileInputStream(path))
             val indent= StringBuilder(10)
-			val indentStep = "	"
+			val indentStep = "\t"
 			var type: Int
             while (true) {
 				type = parser.next()
@@ -69,7 +65,7 @@ object AXMLPrinter {
 						for (i in namespaceCountBefore until namespaceCount) {
 							result.append(
 								String.format(
-									"%xmlns:%s=\"%s\"\n",
+									"%sxmlns:%s=\"%s\"\n",
 									indent,
 									parser.getNamespacePrefix(i),
 									parser.getNamespaceUri(i)
@@ -119,10 +115,7 @@ object AXMLPrinter {
 	}
 
 	private fun getNamespacePrefix(prefix: String?): String {
-		if (prefix==null || prefix.isEmpty()) {
-			return ""
-        }
-		return "$prefix:"
+		return if (prefix.isNullOrEmpty()) { "" } else "$prefix:"
 	}
 
 	private fun getAttributeValue(parser: AXmlResourceParser, index: Int): String? {
@@ -162,10 +155,7 @@ object AXMLPrinter {
     }
 
 	private fun getPackage(id: Int): String {
-		if (id ushr 24 == 1) {
-			return "android:"
-        }
-		return ""
+		return if (id ushr 24 == 1) { "android:" } else ""
     }
 
 	//ILLEGAL STUFF, DONT LOOK :)

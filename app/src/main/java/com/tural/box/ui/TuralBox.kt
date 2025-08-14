@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
 import android.view.MotionEvent
@@ -67,17 +68,21 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -92,6 +97,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -103,6 +109,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
 import com.tural.box.AppExtractActivity
 import com.tural.box.ImageActivity
@@ -118,7 +126,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.UncheckedIOException
 import java.nio.file.Files
-import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
@@ -130,88 +137,73 @@ fun TuralApp(
     context: Context
 ) {
     val scope = rememberCoroutineScope()
-    var checkedPosition by remember { mutableStateOf(CheckedType.LEFT) }
-    var checkedPath by remember { mutableStateOf(Path(RootPath)) }
-    var uncheckedPath by remember { mutableStateOf(Path(RootPath)) }
-    var showToolDialog by remember { mutableStateOf(false) }
-    var showSortDialog by remember { mutableStateOf(false) }
-    var showPathDialog by remember { mutableStateOf(false) }
-    var showCreateFileDialog by remember { mutableStateOf(false) }
-    var showSearchDialog by remember { mutableStateOf(false) }
-    var showAboutDialog by remember { mutableStateOf(false) }
+    var currentPanel by remember { mutableStateOf(PanelPosition.LEFT) }
+    var currentPath by remember { mutableStateOf(Path(RootPath)) }
+    var negativePath by remember { mutableStateOf(Path(RootPath)) }
+    var currentFile by remember { mutableStateOf<File?>(null) }
     var showSthDialog by remember { mutableStateOf(false) }
-    var checkedFile by remember { mutableStateOf<File?>(null) }
-    var leftHighLightFiles by remember { mutableStateOf(emptyList<String>()) }
-    var rightHighLightFiles by remember { mutableStateOf(emptyList<String>()) }
-    var leftPath by remember { mutableStateOf(Path(RootPath)) }
-    var rightPath by remember { mutableStateOf(Path(RootPath)) }
-    var leftFiles by remember { mutableStateOf(emptyList<File>()) }
-    var rightFiles by remember { mutableStateOf(emptyList<File>()) }
     val colorWhite = if (isSystemInDarkTheme()) Color.Black else Color.White
     val leftLazyState = rememberLazyListState()
     val rightLazyState = rememberLazyListState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    var leftSortOrder by remember { mutableStateOf(SortOrder.NAME) }
-    var rightSortOrder by remember { mutableStateOf(SortOrder.NAME) }
-    var showAppDetailDialog by remember { mutableStateOf(false) }
-    var showOpenModeDialog by remember { mutableStateOf(false) }
-    var showCopyDialog by remember { mutableStateOf(false) }
-    var showMoveDialog by remember { mutableStateOf(false) }
+    val dialogManager = remember { DialogManager() }
+    val leftPanelState = remember { PanelStates() }
+    val rightPanelState = remember { PanelStates() }
+
+    fun currentPanelState(): PanelStates {
+        return if (currentPanel == PanelPosition.LEFT) {
+            leftPanelState
+        } else {
+            rightPanelState
+        }
+    }
+
+    fun uncurrentPanelState(): PanelStates {
+        return if (currentPanel == PanelPosition.RIGHT) {
+            leftPanelState
+        } else {
+            rightPanelState
+        }
+    }
 
     fun handleBack() {
-        if (checkedPosition == CheckedType.LEFT) {
-            if (!leftPath.isRootPath()) leftPath = leftPath.parent
-        } else {
-            if (!rightPath.isRootPath()) rightPath = rightPath.parent
+        val cps = currentPanelState()
+        if (!currentPath.isRootPath()){
+            cps.path = cps.path.parent
         }
     }
 
-    fun handleRefresh(pro: Boolean = false) {
+    fun refresh() {
+        val cps = currentPanelState()
         scope.launch(Dispatchers.IO) {
-            val shouldUseLeft = if (pro) checkedPosition != CheckedType.LEFT else checkedPosition == CheckedType.LEFT
-            if (shouldUseLeft) {
-                leftFiles = accessFiles(leftPath, leftSortOrder)
-            } else {
-                rightFiles = accessFiles(rightPath, rightSortOrder)
-            }
+            cps.files = accessFiles(cps.path, cps.sortOrder)
         }
     }
 
-    fun handleFileClick(file: File, isLeftPane: Boolean) {
+    fun negativeRefresh() {
+        val cps = uncurrentPanelState()
+        scope.launch(Dispatchers.IO) {
+            cps.files = accessFiles(cps.path, cps.sortOrder)
+        }
+    }
+
+    fun handleFileClick(file: File) {
         if (file.isDirectory) {
-            val newPath = file.toPath()
-            if (isLeftPane) {
-                leftPath = newPath
-            } else {
-                rightPath = newPath
-            }
+            currentPanelState().path = file.toPath()
         } else {
-            checkedFile = file
+            currentFile = file
             when(getFileType(file)) {
                 FileType.IMAGE -> context.startActivity(Intent(context, ImageActivity::class.java).putExtra("filePath", file.path))
-                FileType.INSTALL -> { showAppDetailDialog = true }
+                FileType.INSTALL -> { dialogManager.showAppDetail = true }
                 FileType.XML -> { showSthDialog = true }
-                else -> { showOpenModeDialog = true }
+                FileType.AUDIO -> { dialogManager.showAudio = true }
+                else -> { dialogManager.showOpenMode = true }
             }
-        }
-    }
-
-    fun setPath(
-        path: Path
-    ) {
-        if (checkedPosition == CheckedType.LEFT) {
-            leftPath = path
-        } else {
-            rightPath = path
         }
     }
 
     BackHandler(
-        enabled = if (checkedPosition == CheckedType.LEFT) {
-            !leftPath.isRootPath()
-        } else {
-            !rightPath.isRootPath()
-        }
+        enabled = !currentPanelState().path.isRootPath()
     ) {
         handleBack()
     }
@@ -250,7 +242,7 @@ fun TuralApp(
                             )
                         },
                         onClick = {
-                            showAboutDialog = true
+                            dialogManager.showAbout = true
                         }
                     )
                     HorizontalDivider()
@@ -296,7 +288,7 @@ fun TuralApp(
                         },
                         onClick = {
                             scope.launch {
-                                setPath(Path(RootPath))
+                                currentPanelState().path = Path(RootPath)
                                 drawerState.close()
                             }
                         }
@@ -333,13 +325,13 @@ fun TuralApp(
                 TopAppBar(
                     title = {
                         Text(
-                            text = checkedPath.pathString,
+                            text = currentPath.pathString,
                             maxLines = 1,
                             overflow = TextOverflow.StartEllipsis,
                             softWrap = false,
                             modifier = Modifier.clickable(
                                 onClick = {
-                                    showPathDialog = true
+                                    dialogManager.showPath = true
                                 }
                             )
                         )
@@ -389,7 +381,7 @@ fun TuralApp(
                                         )
                                     },
                                     onClick = {
-                                        handleRefresh()
+                                        refresh()
                                         expanded = false
                                     }
                                 )
@@ -402,7 +394,7 @@ fun TuralApp(
                                         )
                                     },
                                     onClick = {
-                                        showSearchDialog = true
+                                        dialogManager.showSearch = true
                                         expanded = false
                                     }
                                 )
@@ -418,7 +410,7 @@ fun TuralApp(
                                         )
                                     },
                                     onClick = {
-                                        showSortDialog = true
+                                        dialogManager.showSort = true
                                         expanded = false
                                     }
                                 )
@@ -467,13 +459,13 @@ fun TuralApp(
                                     contentDescription = null
                                 )
                             }
-                            IconButton(onClick = { handleRefresh() }) {
+                            IconButton(onClick = { refresh() }) {
                                 Icon(
                                     painter = painterResource(R.drawable.outline_refresh_24),
                                     contentDescription = null,
                                 )
                             }
-                            IconButton(onClick = { showCreateFileDialog = true }) {
+                            IconButton(onClick = { dialogManager.showCreateFile = true }) {
                                 Icon(
                                     painter = painterResource(R.drawable.outline_add_24),
                                     contentDescription = null,
@@ -481,10 +473,10 @@ fun TuralApp(
                             }
                             IconButton(onClick = {
                                 scope.launch {
-                                    if (checkedPosition == CheckedType.LEFT) {
-                                        rightPath = leftPath
+                                    if (currentPanel == PanelPosition.LEFT) {
+                                        rightPanelState.path = leftPanelState.path
                                     } else {
-                                        leftPath = rightPath
+                                        leftPanelState.path = rightPanelState.path
                                     }
                                 }
                             }) {
@@ -510,19 +502,20 @@ fun TuralApp(
                     .padding(contentPadding)
             ) {
 
-                LaunchedEffect(leftPath, leftSortOrder,Unit) {
-                    if (leftHighLightFiles.any { leftPath.endsWith(it) }) {
-                        leftPath = leftPath.parent
+                LaunchedEffect(leftPanelState.path,Unit) {
+                    val cps = leftPanelState
+                    if (cps.highLightFiles.any { cps.path.endsWith(it) }) {
+                        cps.path = cps.path.parent
                     }
                     scope.launch(Dispatchers.IO) {
-                        leftFiles = accessFiles(leftPath, leftSortOrder)
+                        cps.files = accessFiles(cps.path, cps.sortOrder)
                     }.join()
 
                     scope.launch(Dispatchers.Main) {
-                        if (leftHighLightFiles.isNotEmpty()) {
+                        if (cps.highLightFiles.isNotEmpty()) {
                             delay(50)
-                            val index = leftFiles.indexOfFirst { file ->
-                                file.name.equals(leftHighLightFiles.first(), ignoreCase = true)
+                            val index = cps.files.indexOfFirst { file ->
+                                file.name.equals(cps.highLightFiles.first(), ignoreCase = true)
                             }
                             if (index != -1) {
                                 leftLazyState.scrollToItem(index)
@@ -531,55 +524,47 @@ fun TuralApp(
                     }
                 }
 
-                LaunchedEffect(rightPath, rightSortOrder,Unit) {
-                    if (rightHighLightFiles.any { rightPath.endsWith(it) }) {
-                        rightPath = rightPath.parent
+                LaunchedEffect(rightPanelState.path,Unit) {
+                    val cps = rightPanelState
+                    if (cps.highLightFiles.any { cps.path.endsWith(it) }) {
+                        cps.path = cps.path.parent
                     }
-
                     scope.launch(Dispatchers.IO) {
-                        rightFiles = accessFiles(rightPath, rightSortOrder)
+                        cps.files = accessFiles(cps.path, cps.sortOrder)
                     }.join()
 
                     scope.launch(Dispatchers.Main) {
-                        if (rightHighLightFiles.isNotEmpty()) {
+                        if (cps.highLightFiles.isNotEmpty()) {
                             delay(50)
-                            val index = rightFiles.indexOfFirst { file ->
-                                file.name.equals(rightHighLightFiles.first(), ignoreCase = true)
+                            val index = cps.files.indexOfFirst { file ->
+                                file.name.equals(cps.highLightFiles.first(), ignoreCase = true)
                             }
                             if (index != -1) {
-                                rightLazyState.scrollToItem(index)
+                                leftLazyState.scrollToItem(index)
                             }
                         }
                     }
                 }
 
-                LaunchedEffect(leftPath, rightPath, checkedPosition) {
+                LaunchedEffect(currentPanelState().path, currentPanel) {
                     scope.launch(Dispatchers.Default) {
-                        checkedPath = if (checkedPosition == CheckedType.LEFT) {
-                            leftPath
-                        } else {
-                            rightPath
-                        }
-                        uncheckedPath = if (checkedPosition != CheckedType.LEFT) {
-                            leftPath
-                        } else {
-                            rightPath
-                        }
+                        currentPath = currentPanelState().path
+                        negativePath = uncurrentPanelState().path
                     }
                 }
 
                 fun handleFileLongClick(file: File) {
-                    checkedFile = file
-                    showToolDialog = true
+                    currentFile = file
+                    dialogManager.showTool = true
                 }
 
                 val animatedColorLeft by animateColorAsState(
-                    targetValue = if (checkedPosition == CheckedType.LEFT) MaterialTheme.colorScheme.surface else colorWhite,
+                    targetValue = if (currentPanel == PanelPosition.LEFT) MaterialTheme.colorScheme.surface else colorWhite,
                     animationSpec = tween(150)
                 )
 
                 AnimatedContent(
-                    targetState = leftFiles,
+                    targetState = leftPanelState.files,
                     modifier = Modifier.weight(1f),
                     transitionSpec = {
                         (fadeIn(animationSpec = tween(220, delayMillis = 0)) +
@@ -597,27 +582,22 @@ fun TuralApp(
                             .background(color = animatedColorLeft)
                             .pointerInteropFilter { event ->
                                 if (event.action == MotionEvent.ACTION_DOWN) {
-                                    checkedPosition = CheckedType.LEFT
+                                    currentPanel = PanelPosition.LEFT
                                 }
                                 false
                             },
                         state = leftLazyState
                     ) {
                         item {
-                            UpwardItem {
-                                if (leftPath.pathString != "/storage/emulated/0")
-                                    leftPath = leftPath.parent
-                            }
+                            UpwardItem(leftPanelState)
                         }
                         items(files) { file ->
                             FileItem(
-                                itemData = FileItemData(
-                                    file = file,
-                                    type = getFileType(file),
-                                    highLight = leftHighLightFiles.any { it == file.name },
-                                ),
+                                file = file,
+                                type = getFileType(file),
+                                highLight = leftPanelState.highLightFiles.any { it == file.name },
                                 onFileClick = { file ->
-                                    handleFileClick(file = file, isLeftPane = true)
+                                    handleFileClick(file = file)
                                 },
                                 onFileLongClick = { handleFileLongClick(it) },
                             )
@@ -626,12 +606,12 @@ fun TuralApp(
                 }
 
                 val animatedColorRight by animateColorAsState(
-                    targetValue = if (checkedPosition == CheckedType.RIGHT) MaterialTheme.colorScheme.surface else colorWhite,
+                    targetValue = if (currentPanel == PanelPosition.RIGHT) MaterialTheme.colorScheme.surface else colorWhite,
                     animationSpec = tween(150)
                 )
 
                 AnimatedContent(
-                    targetState = rightFiles,
+                    targetState = rightPanelState.files,
                     modifier = Modifier.weight(1f),
                     transitionSpec = {
                         (fadeIn(animationSpec = tween(220, delayMillis = 0)) +
@@ -649,25 +629,21 @@ fun TuralApp(
                             .background(color = animatedColorRight)
                             .pointerInteropFilter { event ->
                                 if (event.action == MotionEvent.ACTION_DOWN) {
-                                    checkedPosition = CheckedType.RIGHT
+                                    currentPanel = PanelPosition.RIGHT
                                 }
                                 false
                             },
                         state = rightLazyState
                     ) {
                         item {
-                            UpwardItem {
-                                if (rightPath.pathString != "/storage/emulated/0")
-                                    rightPath = rightPath.parent
-                            }
+                            UpwardItem(rightPanelState)
                         }
                         items(files) { file ->
                             FileItem(
-                                itemData = FileItemData(
-                                    file = file,
-                                    type = getFileType(file),
-                                    highLight = rightHighLightFiles.any { it == file.name }),
-                                onFileClick = { handleFileClick(file = it, isLeftPane = false) },
+                                file = file,
+                                type = getFileType(file),
+                                highLight = leftPanelState.highLightFiles.any { it == file.name },
+                                onFileClick = { handleFileClick(file = it) },
                                 onFileLongClick = { handleFileLongClick(it) }
                             )
                         }
@@ -675,12 +651,11 @@ fun TuralApp(
                 }
             }
 
-            var showDeleteDialog by remember { mutableStateOf(false) }
-            var showRenameDialog by remember { mutableStateOf(false) }
 
-            if (showToolDialog)
+
+            if (dialogManager.showTool) {
                 BasicAlertDialog(
-                    onDismissRequest = { showToolDialog = false },
+                    onDismissRequest = { dialogManager.showTool = false },
                     content = {
                         Surface(
                             shape = MaterialTheme.shapes.extraLarge,
@@ -729,21 +704,25 @@ fun TuralApp(
                                         }
                                     }
 
+                                    fun cancel() {
+                                        dialogManager.showTool = false
+                                    }
+
                                     ToolItem(
-                                        text = if (checkedPosition == CheckedType.RIGHT) "<-复制" else "复制->",
+                                        text = if (currentPanel == PanelPosition.RIGHT) "<-复制" else "复制->",
                                         icon = R.drawable.outline_file_copy_24,
                                         onClick = {
-                                            showCopyDialog = true
-                                            showToolDialog = false
+                                            dialogManager.showCopy = true
+                                            cancel()
                                         }
                                     )
 
                                     ToolItem(
-                                        text = if (checkedPosition == CheckedType.RIGHT) "<-移动" else "移动->",
+                                        text = if (currentPanel == PanelPosition.RIGHT) "<-移动" else "移动->",
                                         icon = R.drawable.outline_drive_file_move_24,
                                         onClick = {
-                                            showMoveDialog = true
-                                            showToolDialog = false
+                                            dialogManager.showMove = true
+                                            cancel()
                                         }
                                     )
 
@@ -751,8 +730,8 @@ fun TuralApp(
                                         text = "打开方式",
                                         icon = R.drawable.outline_file_open_24,
                                         onClick = {
-                                            showOpenModeDialog = true
-                                            showToolDialog = false
+                                            dialogManager.showOpenMode = true
+                                            cancel()
                                         }
                                     )
 
@@ -760,8 +739,8 @@ fun TuralApp(
                                         text = "重命名",
                                         icon = R.drawable.outline_edit_24,
                                         onClick = {
-                                            showRenameDialog = true
-                                            showToolDialog = false
+                                            dialogManager.showRename = true
+                                            cancel()
                                         }
                                     )
 
@@ -769,8 +748,8 @@ fun TuralApp(
                                         text = "删除",
                                         icon = R.drawable.outline_delete_24,
                                         onClick = {
-                                            showDeleteDialog = true
-                                            showToolDialog = false
+                                            dialogManager.showDelete = true
+                                            cancel()
                                         }
                                     )
 
@@ -790,27 +769,27 @@ fun TuralApp(
                                         text = "分享",
                                         icon = R.drawable.outline_share_24,
                                         onClick = {
-                                            context.shareFile(checkedFile!!)
-                                            showToolDialog = false
+                                            context.shareFile(currentFile!!)
+                                            cancel()
                                         },
-                                        enabled = !checkedFile!!.isDirectory
+                                        enabled = !currentFile!!.isDirectory
                                     )
                                 }
                             }
                         }
                     }
                 )
-
-            if (showDeleteDialog) {
+            }
+            if (dialogManager.showDelete) {
                 var progress by remember { mutableStateOf<DeleteProgress?>(null) }
                 var loadingType by remember { mutableStateOf(LoadingType.NONE) }
                 AlertDialog(
                     modifier = Modifier.width(560.dp),
-                    onDismissRequest = { showDeleteDialog = false },
+                    onDismissRequest = { dialogManager.showDelete = false },
                     title = { Text("确认删除") },
                     text = {
                         Column {
-                            Text("是否删除 ${checkedFile!!.name} ?")
+                            Text("是否删除 ${currentFile!!.name} ?")
 
                             Spacer(Modifier.height(8.dp))
 
@@ -854,8 +833,8 @@ fun TuralApp(
 
                                 is DeleteProgress.Completed -> {
                                     if (current.isAllSuccess) {
-                                        showDeleteDialog = false
-                                        handleRefresh()
+                                        dialogManager.showDelete = false
+                                        refresh()
                                     } else {
                                         Text(
                                             "部分删除失败",
@@ -873,16 +852,16 @@ fun TuralApp(
                     confirmButton = {
                         Button(
                             onClick = {
-                                if (checkedFile != null) {
+                                if (currentFile != null) {
                                     scope.launch(Dispatchers.IO) {
-                                        if (checkedFile!!.isDirectory) {
+                                        if (currentFile!!.isDirectory) {
                                             loadingType = LoadingType.DIRECTORY
-                                            deleteFolder(checkedFile!!)
+                                            deleteFolder(currentFile!!)
                                                 .catch { e ->
                                                     loadingType = LoadingType.FAIL
                                                     progress = DeleteProgress.Error(
                                                         e as Exception,
-                                                        checkedFile!!
+                                                        currentFile!!
                                                     )
                                                 }
                                                 .collect { update ->
@@ -890,10 +869,10 @@ fun TuralApp(
                                                 }
                                         } else {
                                             loadingType = LoadingType.FILE
-                                            val result = deleteFile(checkedFile!!)
+                                            val result = deleteFile(currentFile!!)
                                             if (result) {
-                                                showDeleteDialog = false
-                                                handleRefresh()
+                                                dialogManager.showDelete = false
+                                                refresh()
                                             } else {
                                                 loadingType = LoadingType.FAIL
                                             }
@@ -910,7 +889,7 @@ fun TuralApp(
                     dismissButton = {
                         FilledTonalButton(
                             onClick = {
-                                showDeleteDialog = false
+                                dialogManager.showDelete = false
                             }
                         ) {
                             Text("取消")
@@ -918,17 +897,16 @@ fun TuralApp(
                     }
                 )
             }
-
-            if (showCopyDialog) {
+            if (dialogManager.showCopy) {
                 var progress by remember { mutableStateOf<DeleteProgress?>(null) }
                 var loadingType by remember { mutableStateOf(LoadingType.NONE) }
                 AlertDialog(
                     modifier = Modifier.width(560.dp),
-                    onDismissRequest = { showCopyDialog = false },
+                    onDismissRequest = { dialogManager.showCopy = false },
                     title = { Text("确认复制") },
                     text = {
                         Column {
-                            Text("是否复制 ${checkedFile!!.name} 到 $uncheckedPath ?")
+                            Text("是否复制 ${currentFile!!.name} 到 $negativePath ?")
 
                             Spacer(Modifier.height(8.dp))
 
@@ -967,8 +945,8 @@ fun TuralApp(
 
                                 is DeleteProgress.Completed -> {
                                     if (current.isAllSuccess) {
-                                        showCopyDialog = false
-                                        handleRefresh(pro = true)
+                                        dialogManager.showCopy = false
+                                        negativeRefresh()
                                     } else {
                                         Text(
                                             "部分复制失败",
@@ -986,16 +964,16 @@ fun TuralApp(
                     confirmButton = {
                         Button(
                             onClick = {
-                                if (checkedFile != null) {
+                                if (currentFile != null) {
                                     scope.launch(Dispatchers.IO) {
-                                        if (checkedFile!!.isDirectory) {
+                                        if (currentFile!!.isDirectory) {
                                             loadingType = LoadingType.DIRECTORY
-                                            copyFolder(checkedFile!!, File("$uncheckedPath/${checkedFile!!.name}"))
+                                            copyFolder(currentFile!!, File("$negativePath/${currentFile!!.name}"))
                                                 .catch { e ->
                                                     loadingType = LoadingType.FAIL
                                                     progress = DeleteProgress.Error(
                                                         e as Exception,
-                                                        checkedFile!!
+                                                        currentFile!!
                                                     )
                                                 }
                                                 .collect { update ->
@@ -1003,10 +981,10 @@ fun TuralApp(
                                                 }
                                         } else {
                                             loadingType = LoadingType.FILE
-                                            val result = copyFile(checkedFile!!, File("$uncheckedPath/${checkedFile!!.name}"))
+                                            val result = copyFile(currentFile!!, File("$negativePath/${currentFile!!.name}"))
                                             if (result) {
-                                                showCopyDialog = false
-                                                handleRefresh(pro = true)
+                                                dialogManager.showCopy = false
+                                                negativeRefresh()
                                             } else {
                                                 loadingType = LoadingType.FAIL
                                             }
@@ -1023,7 +1001,7 @@ fun TuralApp(
                     dismissButton = {
                         FilledTonalButton(
                             onClick = {
-                                showCopyDialog = false
+                                dialogManager.showCopy = false
                             }
                         ) {
                             Text("取消")
@@ -1031,17 +1009,16 @@ fun TuralApp(
                     }
                 )
             }
-
-            if (showMoveDialog) {
+            if (dialogManager.showMove) {
                 var progress by remember { mutableStateOf<DeleteProgress?>(null) }
                 var loadingType by remember { mutableStateOf(LoadingType.NONE) }
                 AlertDialog(
                     modifier = Modifier.width(560.dp),
-                    onDismissRequest = { showMoveDialog = false },
+                    onDismissRequest = { dialogManager.showMove = false },
                     title = { Text("确认移动") },
                     text = {
                         Column {
-                            Text("是否移动 ${checkedFile!!.name} 到 $uncheckedPath ?")
+                            Text("是否移动 ${currentFile!!.name} 到 $negativePath ?")
 
                             Spacer(Modifier.height(8.dp))
 
@@ -1080,9 +1057,9 @@ fun TuralApp(
 
                                 is DeleteProgress.Completed -> {
                                     if (current.isAllSuccess) {
-                                        showMoveDialog = false
-                                        handleRefresh(pro = true)
-                                        handleRefresh()
+                                        dialogManager.showMove = false
+                                        negativeRefresh()
+                                        refresh()
                                     } else {
                                         Text(
                                             "部分移动失败",
@@ -1100,18 +1077,18 @@ fun TuralApp(
                     confirmButton = {
                         Button(
                             onClick = {
-                                if (checkedFile != null) {
+                                if (currentFile != null) {
                                     scope.launch(Dispatchers.IO) {
 
                                         loadingType = LoadingType.FILE
                                         val result = moveFile(
-                                            checkedFile!!,
-                                            File("$uncheckedPath/${checkedFile!!.name}")
+                                            currentFile!!,
+                                            File("$negativePath/${currentFile!!.name}")
                                         )
                                         if (result) {
-                                            showMoveDialog = false
-                                            handleRefresh(pro = true)
-                                            handleRefresh()
+                                            dialogManager.showMove = false
+                                            negativeRefresh()
+                                            refresh()
                                         } else {
                                             loadingType = LoadingType.FAIL
                                         }
@@ -1128,7 +1105,7 @@ fun TuralApp(
                     dismissButton = {
                         FilledTonalButton(
                             onClick = {
-                                showMoveDialog = false
+                                dialogManager.showMove = false
                             }
                         ) {
                             Text("取消")
@@ -1136,12 +1113,11 @@ fun TuralApp(
                     }
                 )
             }
-
-            if (showCreateFileDialog) {
+            if (dialogManager.showCreateFile) {
                 var fileName by remember { mutableStateOf("") }
                 var createFail by remember { mutableStateOf(false) }
                 AlertDialog(
-                    onDismissRequest = { showCreateFileDialog = false },
+                    onDismissRequest = { dialogManager.showCreateFile = false },
                     title = { Text("新建") },
                     text = {
                         val hasInvalidChar = remember(fileName) {
@@ -1188,10 +1164,10 @@ fun TuralApp(
                     confirmButton = {
                         Button(
                             onClick = {
-                                val creator = createFile(checkedPath, fileName)
+                                val creator = createFile(currentPath, fileName)
                                 if (!creator) createFail = true else {
-                                    showCreateFileDialog = false
-                                    handleRefresh()
+                                    dialogManager.showCreateFile = false
+                                    refresh()
                                 }
                             }
                         ) {
@@ -1199,10 +1175,10 @@ fun TuralApp(
                         }
                         Button(
                             onClick = {
-                                val creator = createFolder(checkedPath, fileName)
+                                val creator = createFolder(currentPath, fileName)
                                 if (!creator) createFail = true else {
-                                    showCreateFileDialog = false
-                                    handleRefresh()
+                                    dialogManager.showCreateFile = false
+                                    refresh()
                                 }
                             }
                         ) {
@@ -1211,21 +1187,20 @@ fun TuralApp(
                     },
                     dismissButton = {
                         FilledTonalButton(
-                            onClick = { showCreateFileDialog = false }
+                            onClick = { dialogManager.showCreateFile = false }
                         ) {
                             Text(" 取消 ")
                         }
                     }
                 )
             }
-
-            if (showSortDialog) {
-                val isLeft = checkedPosition == CheckedType.LEFT
+            if (dialogManager.showSort) {
+                val isLeft = currentPanel == PanelPosition.LEFT
                 var selectedSortOption by remember { mutableStateOf(SortOrder.NAME) } // 0=名称, 1=大小, 2=时间, 3=类型
-                selectedSortOption = if (isLeft) leftSortOrder else rightSortOrder
+                selectedSortOption = currentPanelState().sortOrder
 
                 AlertDialog(
-                    onDismissRequest = { showSortDialog = false },
+                    onDismissRequest = { dialogManager.showSort = false },
                     title = { Text("排序 ${if (isLeft) "左" else "右"}") },
                     text = {
                         Column {
@@ -1293,12 +1268,8 @@ fun TuralApp(
                     confirmButton = {
                         Button(
                             onClick = {
-                                if (isLeft) {
-                                    leftSortOrder = selectedSortOption
-                                } else {
-                                    rightSortOrder = selectedSortOption
-                                }
-                                showSortDialog = false
+                                currentPanelState().sortOrder = selectedSortOption
+                                dialogManager.showSort = false
                             }
                         ) {
                             Text("确定")
@@ -1306,19 +1277,18 @@ fun TuralApp(
                     },
                     dismissButton = {
                         FilledTonalButton(
-                            onClick = { showSortDialog = false }
+                            onClick = { dialogManager.showSort = false }
                         ) {
                             Text("取消")
                         }
                     }
                 )
             }
-
-            if (showPathDialog) {
-                var path by remember { mutableStateOf(checkedPath.pathString) }
+            if (dialogManager.showPath) {
+                var path by remember { mutableStateOf(currentPath.pathString) }
                 AlertDialog(
-                    onDismissRequest = { showPathDialog = false },
-                    title = { Text("排序 ${if (checkedPosition == CheckedType.LEFT) "左" else "右"}") },
+                    onDismissRequest = { dialogManager.showPath = false },
+                    title = { Text("排序 ${if (currentPanel == PanelPosition.LEFT) "左" else "右"}") },
                     text = {
                         val focusRequester = remember { FocusRequester() }
 
@@ -1337,8 +1307,8 @@ fun TuralApp(
                     confirmButton = {
                         Button(
                             onClick = {
-                                setPath(Path(path))
-                                showPathDialog = false
+                                currentPanelState().path = Path(path)
+                                dialogManager.showPath = false
                             }
                         ) {
                             Text("确定")
@@ -1346,19 +1316,18 @@ fun TuralApp(
                     },
                     dismissButton = {
                         FilledTonalButton(
-                            onClick = { showPathDialog = false }
+                            onClick = { dialogManager.showPath = false }
                         ) {
                             Text("取消")
                         }
                     }
                 )
             }
-
-            if (showRenameDialog) {
-                var fileName by remember { mutableStateOf(checkedFile!!.name) }
+            if (dialogManager.showRename) {
+                var fileName by remember { mutableStateOf(currentFile!!.name) }
                 var renameFail by remember { mutableStateOf(false) }
                 AlertDialog(
-                    onDismissRequest = { showRenameDialog = false },
+                    onDismissRequest = { dialogManager.showRename = false },
                     title = { Text("重命名") },
                     text = {
                         val hasInvalidChar = remember(fileName) {
@@ -1406,12 +1375,12 @@ fun TuralApp(
                         Button(
                             onClick = {
                                 val renamer = renameFile(
-                                    checkedFile!!,
-                                    File("${checkedFile!!.parent}/$fileName")
+                                    currentFile!!,
+                                    File("${currentFile!!.parent}/$fileName")
                                 )
                                 if (!renamer) renameFail = true else {
-                                    showRenameDialog = false
-                                    handleRefresh()
+                                    dialogManager.showRename = false
+                                    refresh()
                                 }
                             }
                         ) {
@@ -1420,15 +1389,14 @@ fun TuralApp(
                     },
                     dismissButton = {
                         FilledTonalButton(
-                            onClick = { showRenameDialog = false }
+                            onClick = { dialogManager.showRename = false }
                         ) {
                             Text(" 取消 ")
                         }
                     }
                 )
             }
-
-            if (showSearchDialog) {
+            if (dialogManager.showSearch) {
                 var searchFileName by remember { mutableStateOf("") }
                 val finded = remember { mutableStateListOf<File>() }
                 var searchProgress by remember { mutableFloatStateOf(0f) }
@@ -1440,7 +1408,7 @@ fun TuralApp(
                     withContext(Dispatchers.IO) {
                         if (isSearching) {
                             finded.clear()
-                            val searchPath = checkedPath
+                            val searchPath = currentPath
                             val totalFiles: Long = try {
                                 if (includeSubdirectories) {
                                     Files.walk(searchPath).use { it.count() }
@@ -1485,7 +1453,7 @@ fun TuralApp(
                 }
 
                 AlertDialog(
-                    onDismissRequest = { showSearchDialog = false },
+                    onDismissRequest = { dialogManager.showSearch = false },
                     title = { Text("搜索") },
                     text = {
                         Column {
@@ -1531,25 +1499,16 @@ fun TuralApp(
                                 ) {
                                     items(finded) { file ->
                                         FileItem(
-                                            itemData = FileItemData(
-                                                file = file,
-                                                type = getFileType(file)
-                                            ),
+                                            file = file,
+                                            type = getFileType(file),
                                             onFileClick = {
-                                                handleFileClick(
-                                                    file = file,
-                                                    isLeftPane = checkedPosition == CheckedType.LEFT
-                                                )
+                                                handleFileClick(file = file)
                                             },
                                             onFileLongClick = {
-                                                if (checkedPosition == CheckedType.LEFT) {
-                                                    leftHighLightFiles = listOf(file.name)
-                                                    leftPath = Path(file.path)
-                                                } else {
-                                                    rightHighLightFiles = listOf(file.name)
-                                                    rightPath = Path(file.path)
-                                                }
-                                                showSearchDialog = false
+                                                val cps = currentPanelState()
+                                                cps.highLightFiles = listOf(file.name)
+                                                cps.path = Path(file.path)
+                                                dialogManager.showSearch = false
                                             }
                                         )
                                     }
@@ -1571,7 +1530,7 @@ fun TuralApp(
                     },
                     dismissButton = {
                         FilledTonalButton(
-                            onClick = { showSearchDialog = false },
+                            onClick = { dialogManager.showSearch = false },
                             enabled = !isSearching
                         ) {
                             Text("取消")
@@ -1579,12 +1538,11 @@ fun TuralApp(
                     }
                 )
             }
-
-            if (showAppDetailDialog) {
-                val app = checkedFile
+            if (dialogManager.showAppDetail) {
+                val app = currentFile
                 val pm = context.packageManager
                 AlertDialog(
-                    onDismissRequest = { showAppDetailDialog = false },
+                    onDismissRequest = { dialogManager.showAppDetail = false },
                     text = {
                         Column {
                             val apkInfo = try { pm.getPackageArchiveInfo(app!!.path, 0) } catch (_: Exception) { null }
@@ -1699,7 +1657,7 @@ fun TuralApp(
                         }
                         Button(
                             onClick = {
-                                install(context, checkedFile!!)
+                                install(context, currentFile!!)
                             }
                         ) {
                             Text("安装")
@@ -1716,10 +1674,9 @@ fun TuralApp(
                     }
                 )
             }
-
-            if (showAboutDialog)
+            if (dialogManager.showAbout) {
                 BasicAlertDialog(
-                    onDismissRequest = { showAboutDialog = false },
+                    onDismissRequest = { dialogManager.showAbout = false },
                     content = {
                         Surface(
                             shape = MaterialTheme.shapes.extraLarge,
@@ -1767,7 +1724,10 @@ fun TuralApp(
                                 LinkText(
                                     "加入我们的",
                                     {
-                                        val intent = Intent(Intent.ACTION_VIEW, context.getString(R.string.qq_group_link).toUri())
+                                        val intent = Intent(
+                                            Intent.ACTION_VIEW,
+                                            context.getString(R.string.qq_group_link).toUri()
+                                        )
                                         context.startActivity(intent)
                                     },
                                     "QQ 群聊",
@@ -1777,12 +1737,13 @@ fun TuralApp(
                         }
                     }
                 )
+            }
             if (showSthDialog) {
                 AlertDialog(
                     onDismissRequest = { showSthDialog = false },
                     confirmButton = {},
                     text = {
-                        val pt = AXMLPrinter.print(checkedFile!!.path)
+                        val pt = AXMLPrinter.print(currentFile!!.path)
                         Text(
                             pt,
                             modifier = Modifier
@@ -1792,13 +1753,12 @@ fun TuralApp(
                     }
                 )
             }
-
-            if (showOpenModeDialog) {
+            if (dialogManager.showOpenMode) {
                 AlertDialog(
-                    onDismissRequest = { showOpenModeDialog = false },
+                    onDismissRequest = { dialogManager.showOpenMode = false },
                     confirmButton = {
                         Button(
-                            onClick = { showOpenModeDialog = false }
+                            onClick = { dialogManager.showOpenMode = false }
                         ) {
                             Text("取消")
                         }
@@ -1842,6 +1802,145 @@ fun TuralApp(
                             OpenModeItem(name = "脚本", icon = R.drawable.outline_terminal_24)
                             OpenModeItem(name = "字体", icon = R.drawable.outline_font_download_24)
                             OpenModeItem(name = "压缩包", icon = R.drawable.outline_archive_24)
+                        }
+                    }
+                )
+            }
+            if (dialogManager.showAudio) {
+                BasicAlertDialog(
+                    onDismissRequest = { dialogManager.showAudio = false },
+                    content = {
+                        val context = LocalContext.current
+                        val exoPlayer = remember {
+                            ExoPlayer.Builder(context).build().apply {
+                                val mediaItem = MediaItem.fromUri(Uri.fromFile(currentFile))
+                                setMediaItem(mediaItem)
+                                prepare()
+                            }
+                        }
+
+                        var isPlaying by remember { mutableStateOf(true) }
+                        var isLooping by remember { mutableStateOf(false) }
+                        var playbackSpeed by remember { mutableFloatStateOf(1f) }
+                        var currentPosition by remember { mutableLongStateOf(0L) }
+                        var totalDuration by remember { mutableLongStateOf(0L) }
+
+                        DisposableEffect(Unit) {
+                            onDispose {
+                                exoPlayer.release()
+                            }
+                        }
+
+                        LaunchedEffect(exoPlayer) {
+                            exoPlayer.play()
+                            while (true) {
+                                currentPosition = exoPlayer.currentPosition
+                                totalDuration = exoPlayer.duration
+                                if (totalDuration in 1..currentPosition && !isLooping) {
+                                    exoPlayer.pause()
+                                    isPlaying = false
+                                }
+                                delay(1)
+                            }
+                        }
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceContainer,
+                                    MaterialTheme.shapes.extraLarge
+                                ),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Spacer(modifier = Modifier.padding(vertical = 8.dp))
+                            Text(
+                                currentFile!!.name,
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(horizontal = 24.dp)
+                            )
+
+                            Column(
+                                modifier = Modifier.padding(top = 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+
+                                Slider(
+                                    value = if (totalDuration > 0) currentPosition.toFloat().coerceIn(0f, totalDuration.toFloat()) else 0f,
+                                    onValueChange = {exoPlayer.seekTo(it.toLong()) },
+                                    valueRange = if (totalDuration > 0) 0f..totalDuration.toFloat() else 0f .. 0f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                                )
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp),
+                                    horizontalArrangement = Arrangement.SpaceEvenly
+                                ) {
+                                    TextButton(onClick = {
+                                        playbackSpeed = when (playbackSpeed) {
+                                            0.5f -> 1f
+                                            1f -> 1.5f
+                                            1.5f -> 2f
+                                            else -> 0.5f
+                                        }
+                                        exoPlayer.setPlaybackSpeed(playbackSpeed)
+                                    }) {
+                                        Text("$playbackSpeed x")
+                                    }
+
+                                    IconButton(onClick = {
+                                        isLooping = !isLooping
+                                        exoPlayer.repeatMode =
+                                            if (isLooping) ExoPlayer.REPEAT_MODE_ONE else ExoPlayer.REPEAT_MODE_OFF
+                                    }) {
+                                        Icon(
+                                            painter = painterResource(if (isLooping) {
+                                                R.drawable.outline_repeat_on_24
+                                            } else {
+                                                R.drawable.baseline_repeat_24
+                                            }),
+                                            contentDescription = if (isLooping) "关闭循环" else "开启循环"
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            dialogManager.showAudio = false
+                                        }
+                                    ) {
+                                        Icon(
+                                            painterResource(R.drawable.outline_close_24),
+                                            contentDescription = null,
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            if (isPlaying) {
+                                                exoPlayer.pause()
+                                            } else {
+                                                exoPlayer.play()
+                                            }
+                                            isPlaying = !isPlaying
+                                            if (totalDuration in 1..currentPosition) {
+                                                exoPlayer.seekTo(0)
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(if (isPlaying) {
+                                                R.drawable.outline_pause_24
+                                            } else {
+                                                R.drawable.outline_play_arrow_24
+                                            }),
+                                            contentDescription = if (isPlaying) "暂停" else "播放",
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 )
@@ -1892,7 +1991,7 @@ data class PackageInfo(
     val icon: Drawable
 )
 
-enum class CheckedType {
+enum class PanelPosition {
     LEFT,
     RIGHT
 }

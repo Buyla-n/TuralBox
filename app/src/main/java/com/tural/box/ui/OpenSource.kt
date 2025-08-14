@@ -87,6 +87,11 @@ fun OpenSourceScreen(onBackPressed: () -> Unit) {
             name = "Scale",
             license = "Apache 2.0",
             website = "https://github.com/jvziyaoyao/scale"
+        ),
+        Library(
+            name = "ExoPlayer",
+            license = "Apache 2.0",
+            website = "https://github.com/google/ExoPlayer"
         )
     )
 

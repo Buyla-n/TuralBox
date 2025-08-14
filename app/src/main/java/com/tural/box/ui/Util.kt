@@ -66,7 +66,7 @@ fun getFileType(file: File): FileType {
     return if (file.isDirectory) FileType.FOLDER else when (file.extension.lowercase()) {
         "txt" -> FileType.TEXT
         "jpg", "jpeg", "png", "gif", "webp" -> FileType.IMAGE
-        "mp3", "wav" -> FileType.AUDIO
+        "mp3", "wav", "ogg" -> FileType.AUDIO
         "mp4" -> FileType.VIDEO
         "sh" -> FileType.SHELL
         "apk" -> FileType.INSTALL
