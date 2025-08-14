@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.tural.box.decoder.axml;
+package com.tural.box.decoder.axml
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.EOFException
+import java.io.IOException
+import java.io.InputStream
 
 /**
  * @author Dmitry Skiba
@@ -25,71 +25,65 @@ import java.io.InputStream;
  * Simple helper class that allows reading of integers.
  * <p>
  */
-public final class IntReader {
+class IntReader(private var stream: InputStream?, private var bigEndian: Boolean) {
 
-	public IntReader(InputStream stream, boolean bigEndian) {
-		reset(stream, bigEndian);
+	fun reset(stream: InputStream?, bigEndian: Boolean) {
+		this.stream = stream
+		this.bigEndian = bigEndian
 	}
 
-	public void reset(InputStream stream, boolean bigEndian) {
-		m_stream = stream;
-		m_bigEndian = bigEndian;
-	}
-
-	public void close() {
-		if (m_stream == null) {
-			return;
+	fun close() {
+		if (stream == null) {
+			return
 		}
 		try {
-			m_stream.close();
-		} catch (IOException ignored) {
+			stream?.close()
+		} catch (_: IOException) {
 		}
-		reset(null, false);
+		reset(null, false)
 	}
 
-	public int readInt() throws IOException {
-		int length = 4;
-		int result = 0;
-		if (m_bigEndian) {
-			for (int i = (length - 1) * 8; i >= 0; i -= 8) {
-				int b = m_stream.read();
-				if (b == -1) {
-					throw new EOFException();
-				}
-				result |= (b << i);
+	@Throws(IOException::class)
+	fun readInt(): Int {
+		val length = 4
+		var result = 0
+		if (bigEndian) {
+			for (i in (length - 1) * 8 downTo 0 step 8) {
+				val b = stream?.read() ?: throw EOFException()
+				result = result or (b shl i)
 			}
 		} else {
-			length *= 8;
-			for (int i = 0; i != length; i += 8) {
-				int b = m_stream.read();
-				if (b == -1) {
-					throw new EOFException();
-				}
-				result |= (b << i);
+			val bits = length * 8
+			for (i in 0 until bits step 8) {
+				val b = stream?.read() ?: throw EOFException()
+				result = result or (b shl i)
 			}
 		}
-		return result;
+		return result
 	}
 
-	public int[] readIntArray(int length) throws IOException {
-		int[] array=new int[length];
-		readIntArray(array,0,length);
-		return array;
+	@Throws(IOException::class)
+	fun readIntArray(length: Int): IntArray {
+		val array = IntArray(length)
+		readIntArray(array, 0, length)
+		return array
 	}
 
-	public void readIntArray(int[] array, int offset, int length) throws IOException {
-		for (;length>0;length-=1) {
-			array[offset++]=readInt();
+	@Throws(IOException::class)
+	fun readIntArray(array: IntArray, offset: Int, length: Int) {
+		var currentOffset = offset
+		var remaining = length
+		while (remaining > 0) {
+			array[currentOffset++] = readInt()
+			remaining--
 		}
 	}
 
-	public void skipInt() throws IOException {
-		long skipped = m_stream.skip(4);
-		if (skipped != 4) {
-			throw new EOFException();
+	@Throws(IOException::class)
+	fun skipInt() {
+		val skipped = stream?.skip(4) ?: throw EOFException()
+		if (skipped != 4L) {
+			throw EOFException()
 		}
 	}
-
-	private InputStream m_stream;
-	private boolean m_bigEndian;
 }

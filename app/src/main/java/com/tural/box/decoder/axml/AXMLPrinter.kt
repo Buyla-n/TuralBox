@@ -35,7 +35,7 @@ object AXMLPrinter {
 			val parser= AXmlResourceParser()
 			parser.open( FileInputStream(path))
             val indent= StringBuilder(10)
-            val indentStep="	"
+			val indentStep = "	"
 			var type: Int
             while (true) {
 				type = parser.next()
@@ -58,12 +58,12 @@ object AXMLPrinter {
 						)
 						indent.append(indentStep)
 
-						val namespaceCountBefore = parser.getNamespaceCount(parser.depth - 1)
-						val namespaceCount = parser.getNamespaceCount(parser.depth)
+						val namespaceCountBefore = parser.getNamespaceCount(parser.getDepth())
+						val namespaceCount = parser.getNamespaceCount(parser.getDepth() - 1)
 						for (i in namespaceCountBefore until namespaceCount) {
 							result.append(
 								String.format(
-									"%sxmlns:%s=\"%s\"\n",
+									"%xmlns:%s=\"%s\"\n",
 									indent,
 									parser.getNamespacePrefix(i),
 									parser.getNamespaceUri(i)
@@ -71,7 +71,7 @@ object AXMLPrinter {
 							)
 						}
 
-						for (i in 0 until parser.attributeCount) {
+						for (i in 0 until parser.getAttributeCount()) {
 							result.append(
 								String.format(
 									"%s%s%s=\"%s\"",
@@ -119,7 +119,7 @@ object AXMLPrinter {
 		return "$prefix:"
 	}
 
-	private fun getAttributeValue(parser: AXmlResourceParser, index: Int): String {
+	private fun getAttributeValue(parser: AXmlResourceParser, index: Int): String? {
 		val type=parser.getAttributeValueType(index)
         val data=parser.getAttributeValueData(index)
         if (type== TypedValue.TYPE_STRING) {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -196,7 +197,8 @@ fun AppExtract(){
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 )
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0,0,0,0)
     ) { contentPadding ->
         Column(modifier = Modifier.padding(contentPadding)) {
             SecondaryTabRow(
@@ -256,6 +258,9 @@ fun AppExtract(){
                             items(filteredUserApps) { app ->
                                 AppItem(app, pm) { handleAppClick(it) }
                             }
+                            item {
+                                Spacer(Modifier.height(16.dp))
+                            }
                         }
                     }
 
@@ -265,6 +270,9 @@ fun AppExtract(){
                         ) {
                             items(filteredSystemApps) { app ->
                                 AppItem(app, pm) { handleAppClick(it) }
+                            }
+                            item {
+                                Spacer(Modifier.height(16.dp))
                             }
                         }
                     }

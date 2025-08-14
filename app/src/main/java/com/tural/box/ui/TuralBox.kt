@@ -19,6 +19,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -64,7 +65,6 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -97,6 +97,7 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
@@ -107,6 +108,7 @@ import com.tural.box.AppExtractActivity
 import com.tural.box.ImageActivity
 import com.tural.box.OpenSourceActivity
 import com.tural.box.R
+import com.tural.box.TerminalActivity
 import com.tural.box.decoder.axml.AXMLPrinter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -130,8 +132,10 @@ fun TuralApp(
     val scope = rememberCoroutineScope()
     var checkedPosition by remember { mutableStateOf(CheckedType.LEFT) }
     var checkedPath by remember { mutableStateOf(Path(RootPath)) }
+    var uncheckedPath by remember { mutableStateOf(Path(RootPath)) }
     var showToolDialog by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
+    var showPathDialog by remember { mutableStateOf(false) }
     var showCreateFileDialog by remember { mutableStateOf(false) }
     var showSearchDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -150,6 +154,9 @@ fun TuralApp(
     var leftSortOrder by remember { mutableStateOf(SortOrder.NAME) }
     var rightSortOrder by remember { mutableStateOf(SortOrder.NAME) }
     var showAppDetailDialog by remember { mutableStateOf(false) }
+    var showOpenModeDialog by remember { mutableStateOf(false) }
+    var showCopyDialog by remember { mutableStateOf(false) }
+    var showMoveDialog by remember { mutableStateOf(false) }
 
     fun handleBack() {
         if (checkedPosition == CheckedType.LEFT) {
@@ -159,9 +166,10 @@ fun TuralApp(
         }
     }
 
-    fun handleRefresh() {
+    fun handleRefresh(pro: Boolean = false) {
         scope.launch(Dispatchers.IO) {
-            if (checkedPosition == CheckedType.LEFT) {
+            val shouldUseLeft = if (pro) checkedPosition != CheckedType.LEFT else checkedPosition == CheckedType.LEFT
+            if (shouldUseLeft) {
                 leftFiles = accessFiles(leftPath, leftSortOrder)
             } else {
                 rightFiles = accessFiles(rightPath, rightSortOrder)
@@ -178,17 +186,12 @@ fun TuralApp(
                 rightPath = newPath
             }
         } else {
+            checkedFile = file
             when(getFileType(file)) {
                 FileType.IMAGE -> context.startActivity(Intent(context, ImageActivity::class.java).putExtra("filePath", file.path))
-                FileType.INSTALL -> {
-                    checkedFile = file
-                    showAppDetailDialog = true
-                }
-                FileType.XML -> {
-                    checkedFile = file
-                    showSthDialog = true
-                }
-                else -> {}
+                FileType.INSTALL -> { showAppDetailDialog = true }
+                FileType.XML -> { showSthDialog = true }
+                else -> { showOpenModeDialog = true }
             }
         }
     }
@@ -314,7 +317,9 @@ fun TuralApp(
                         label = { Text("终端模拟") },
                         selected = false,
                         icon = { Icon(painterResource(R.drawable.outline_terminal_24), contentDescription = null) },
-                        onClick = { /* Handle click */ },
+                        onClick = {
+                            context.startActivity(Intent(context, TerminalActivity::class.java))
+                        },
                     )
                     Spacer(Modifier.height(12.dp))
                 }
@@ -331,7 +336,12 @@ fun TuralApp(
                             text = checkedPath.pathString,
                             maxLines = 1,
                             overflow = TextOverflow.StartEllipsis,
-                            softWrap = false
+                            softWrap = false,
+                            modifier = Modifier.clickable(
+                                onClick = {
+                                    showPathDialog = true
+                                }
+                            )
                         )
                     },
                     navigationIcon = {
@@ -457,9 +467,9 @@ fun TuralApp(
                                     contentDescription = null
                                 )
                             }
-                            IconButton(onClick = { /* do something */ }) {
+                            IconButton(onClick = { handleRefresh() }) {
                                 Icon(
-                                    painter = painterResource(R.drawable.outline_keyboard_arrow_right_24),
+                                    painter = painterResource(R.drawable.outline_refresh_24),
                                     contentDescription = null,
                                 )
                             }
@@ -546,6 +556,11 @@ fun TuralApp(
                 LaunchedEffect(leftPath, rightPath, checkedPosition) {
                     scope.launch(Dispatchers.Default) {
                         checkedPath = if (checkedPosition == CheckedType.LEFT) {
+                            leftPath
+                        } else {
+                            rightPath
+                        }
+                        uncheckedPath = if (checkedPosition != CheckedType.LEFT) {
                             leftPath
                         } else {
                             rightPath
@@ -717,19 +732,28 @@ fun TuralApp(
                                     ToolItem(
                                         text = if (checkedPosition == CheckedType.RIGHT) "<-复制" else "复制->",
                                         icon = R.drawable.outline_file_copy_24,
-                                        onClick = { /* 复制操作 */ }
+                                        onClick = {
+                                            showCopyDialog = true
+                                            showToolDialog = false
+                                        }
                                     )
 
                                     ToolItem(
                                         text = if (checkedPosition == CheckedType.RIGHT) "<-移动" else "移动->",
                                         icon = R.drawable.outline_drive_file_move_24,
-                                        onClick = { /* 移动操作 */ }
+                                        onClick = {
+                                            showMoveDialog = true
+                                            showToolDialog = false
+                                        }
                                     )
 
                                     ToolItem(
                                         text = "打开方式",
                                         icon = R.drawable.outline_file_open_24,
-                                        onClick = { /* 打开方式操作 */ }
+                                        onClick = {
+                                            showOpenModeDialog = true
+                                            showToolDialog = false
+                                        }
                                     )
 
                                     ToolItem(
@@ -791,12 +815,7 @@ fun TuralApp(
                             Spacer(Modifier.height(8.dp))
 
                             when (loadingType) {
-                                LoadingType.DIRECTORY_FAIL -> Text(
-                                    "删除失败",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-
-                                LoadingType.FILE_FAIL -> Text(
+                                LoadingType.FAIL -> Text(
                                     "删除失败",
                                     color = MaterialTheme.colorScheme.error
                                 )
@@ -830,7 +849,7 @@ fun TuralApp(
                                 }
 
                                 is DeleteProgress.Error -> {
-                                    loadingType == LoadingType.DIRECTORY_FAIL
+                                    loadingType == LoadingType.FAIL
                                 }
 
                                 is DeleteProgress.Completed -> {
@@ -860,7 +879,7 @@ fun TuralApp(
                                             loadingType = LoadingType.DIRECTORY
                                             deleteFolder(checkedFile!!)
                                                 .catch { e ->
-                                                    loadingType = LoadingType.DIRECTORY_FAIL
+                                                    loadingType = LoadingType.FAIL
                                                     progress = DeleteProgress.Error(
                                                         e as Exception,
                                                         checkedFile!!
@@ -876,12 +895,12 @@ fun TuralApp(
                                                 showDeleteDialog = false
                                                 handleRefresh()
                                             } else {
-                                                loadingType = LoadingType.FILE_FAIL
+                                                loadingType = LoadingType.FAIL
                                             }
                                         }
                                     }
                                 } else {
-                                    loadingType = LoadingType.FILE_FAIL
+                                    loadingType = LoadingType.FAIL
                                 }
                             }
                         ) {
@@ -900,9 +919,226 @@ fun TuralApp(
                 )
             }
 
+            if (showCopyDialog) {
+                var progress by remember { mutableStateOf<DeleteProgress?>(null) }
+                var loadingType by remember { mutableStateOf(LoadingType.NONE) }
+                AlertDialog(
+                    modifier = Modifier.width(560.dp),
+                    onDismissRequest = { showCopyDialog = false },
+                    title = { Text("确认复制") },
+                    text = {
+                        Column {
+                            Text("是否复制 ${checkedFile!!.name} 到 $uncheckedPath ?")
+
+                            Spacer(Modifier.height(8.dp))
+
+                            when (loadingType) {
+                                LoadingType.FAIL -> Text(
+                                    "复制失败",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+
+                                LoadingType.FILE -> LinearProgressIndicator(modifier = Modifier)
+                                else -> {}
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            when (val current = progress) {
+                                is DeleteProgress.InProgress -> {
+
+                                    LinearProgressIndicator(
+                                        progress = { current.percentage / 100f },
+                                        modifier = Modifier
+                                    )
+
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("进度: ${current.percentage}%")
+                                    Text("已处理: ${current.current}/${current.total}")
+                                    if (current.failedCount > 0) {
+                                        loadingType = LoadingType.PART_FAIL
+                                        Text("失败: ${current.failedCount}", color = Color.Red)
+                                    }
+                                }
+
+                                is DeleteProgress.Error -> {
+                                    loadingType == LoadingType.FAIL
+                                }
+
+                                is DeleteProgress.Completed -> {
+                                    if (current.isAllSuccess) {
+                                        showCopyDialog = false
+                                        handleRefresh(pro = true)
+                                    } else {
+                                        Text(
+                                            "部分复制失败",
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                        println(loadingType)
+                                    }
+                                }
+
+                                null -> {}
+                            }
+
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (checkedFile != null) {
+                                    scope.launch(Dispatchers.IO) {
+                                        if (checkedFile!!.isDirectory) {
+                                            loadingType = LoadingType.DIRECTORY
+                                            copyFolder(checkedFile!!, File("$uncheckedPath/${checkedFile!!.name}"))
+                                                .catch { e ->
+                                                    loadingType = LoadingType.FAIL
+                                                    progress = DeleteProgress.Error(
+                                                        e as Exception,
+                                                        checkedFile!!
+                                                    )
+                                                }
+                                                .collect { update ->
+                                                    progress = update
+                                                }
+                                        } else {
+                                            loadingType = LoadingType.FILE
+                                            val result = copyFile(checkedFile!!, File("$uncheckedPath/${checkedFile!!.name}"))
+                                            if (result) {
+                                                showCopyDialog = false
+                                                handleRefresh(pro = true)
+                                            } else {
+                                                loadingType = LoadingType.FAIL
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    loadingType = LoadingType.FAIL
+                                }
+                            }
+                        ) {
+                            Text("复制")
+                        }
+                    },
+                    dismissButton = {
+                        FilledTonalButton(
+                            onClick = {
+                                showCopyDialog = false
+                            }
+                        ) {
+                            Text("取消")
+                        }
+                    }
+                )
+            }
+
+            if (showMoveDialog) {
+                var progress by remember { mutableStateOf<DeleteProgress?>(null) }
+                var loadingType by remember { mutableStateOf(LoadingType.NONE) }
+                AlertDialog(
+                    modifier = Modifier.width(560.dp),
+                    onDismissRequest = { showMoveDialog = false },
+                    title = { Text("确认移动") },
+                    text = {
+                        Column {
+                            Text("是否移动 ${checkedFile!!.name} 到 $uncheckedPath ?")
+
+                            Spacer(Modifier.height(8.dp))
+
+                            when (loadingType) {
+                                LoadingType.FAIL -> Text(
+                                    "移动失败",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+
+                                LoadingType.FILE -> LinearProgressIndicator(modifier = Modifier)
+                                else -> {}
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            when (val current = progress) {
+                                is DeleteProgress.InProgress -> {
+
+                                    LinearProgressIndicator(
+                                        progress = { current.percentage / 100f },
+                                        modifier = Modifier
+                                    )
+
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("进度: ${current.percentage}%")
+                                    Text("已处理: ${current.current}/${current.total}")
+                                    if (current.failedCount > 0) {
+                                        loadingType = LoadingType.PART_FAIL
+                                        Text("失败: ${current.failedCount}", color = Color.Red)
+                                    }
+                                }
+
+                                is DeleteProgress.Error -> {
+                                    loadingType == LoadingType.FAIL
+                                }
+
+                                is DeleteProgress.Completed -> {
+                                    if (current.isAllSuccess) {
+                                        showMoveDialog = false
+                                        handleRefresh(pro = true)
+                                        handleRefresh()
+                                    } else {
+                                        Text(
+                                            "部分移动失败",
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                        println(loadingType)
+                                    }
+                                }
+
+                                null -> {}
+                            }
+
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (checkedFile != null) {
+                                    scope.launch(Dispatchers.IO) {
+
+                                        loadingType = LoadingType.FILE
+                                        val result = moveFile(
+                                            checkedFile!!,
+                                            File("$uncheckedPath/${checkedFile!!.name}")
+                                        )
+                                        if (result) {
+                                            showMoveDialog = false
+                                            handleRefresh(pro = true)
+                                            handleRefresh()
+                                        } else {
+                                            loadingType = LoadingType.FAIL
+                                        }
+
+                                    }
+                                } else {
+                                    loadingType = LoadingType.FAIL
+                                }
+                            }
+                        ) {
+                            Text("移动")
+                        }
+                    },
+                    dismissButton = {
+                        FilledTonalButton(
+                            onClick = {
+                                showMoveDialog = false
+                            }
+                        ) {
+                            Text("取消")
+                        }
+                    }
+                )
+            }
+
             if (showCreateFileDialog) {
                 var fileName by remember { mutableStateOf("") }
-                val invalidChars = remember { listOf('/', '\\', ':', '*', '?', '"', '<', '>', '|') }
                 var createFail by remember { mutableStateOf(false) }
                 AlertDialog(
                     onDismissRequest = { showCreateFileDialog = false },
@@ -1078,9 +1314,48 @@ fun TuralApp(
                 )
             }
 
+            if (showPathDialog) {
+                var path by remember { mutableStateOf(checkedPath.pathString) }
+                AlertDialog(
+                    onDismissRequest = { showPathDialog = false },
+                    title = { Text("排序 ${if (checkedPosition == CheckedType.LEFT) "左" else "右"}") },
+                    text = {
+                        val focusRequester = remember { FocusRequester() }
+
+                        TextField(
+                            value = path,
+                            onValueChange = { path = it },
+                            shape = MaterialTheme.shapes.small,
+                            singleLine = true,
+                            modifier = Modifier.focusRequester(focusRequester)
+                        )
+
+                        LaunchedEffect(Unit) {
+                            focusRequester.requestFocus()
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                setPath(Path(path))
+                                showPathDialog = false
+                            }
+                        ) {
+                            Text("确定")
+                        }
+                    },
+                    dismissButton = {
+                        FilledTonalButton(
+                            onClick = { showPathDialog = false }
+                        ) {
+                            Text("取消")
+                        }
+                    }
+                )
+            }
+
             if (showRenameDialog) {
                 var fileName by remember { mutableStateOf(checkedFile!!.name) }
-                val invalidChars = remember { listOf('/', '\\', ':', '*', '?', '"', '<', '>', '|') }
                 var renameFail by remember { mutableStateOf(false) }
                 AlertDialog(
                     onDismissRequest = { showRenameDialog = false },
@@ -1308,54 +1583,39 @@ fun TuralApp(
             if (showAppDetailDialog) {
                 val app = checkedFile
                 val pm = context.packageManager
-                var loadType by remember { mutableStateOf(ExtractProcess.NONE) }
                 AlertDialog(
                     onDismissRequest = { showAppDetailDialog = false },
                     text = {
                         Column {
-                            val apkInfo =
-                                try {
-                                    pm.getPackageArchiveInfo(app!!.path, 0)
-                                } catch (_: Exception) {
-                                    null
-                                }
+                            val apkInfo = try { pm.getPackageArchiveInfo(app!!.path, 0) } catch (_: Exception) { null }
 
                             if (apkInfo != null) {
 
-                                val isInstalled = try {
+                                apkInfo.applicationInfo!!.apply {
+                                    sourceDir = app!!.absolutePath
+                                    publicSourceDir = app.absolutePath
+                                }
+
+                                val isIn = try {
                                     pm.getApplicationInfo(apkInfo.packageName, 0)
                                     true
                                 } catch (_: PackageManager.NameNotFoundException) {
                                     false
                                 }
 
-                                val packageInfo = if (isInstalled) {
-                                    val pkgInfo = pm.getPackageInfo(apkInfo.packageName, 0)
-                                    PackageInfo(
-                                        name = pm.getApplicationLabel(pkgInfo.applicationInfo!!).toString(),
-                                        uid = pkgInfo.applicationInfo!!.uid,
-                                        versionName = pkgInfo.versionName ?: "未知",
-                                        versionCode = pkgInfo.longVersionCode,
-                                        packageName = pkgInfo.packageName,
-                                        icon = pm.getApplicationIcon(pkgInfo.packageName),
-                                        sourceDir = pkgInfo.applicationInfo!!.sourceDir,
-                                        dataDir = pkgInfo.applicationInfo!!.dataDir
-                                    )
-                                } else {
-                                    apkInfo.applicationInfo!!.apply {
-                                        sourceDir = app!!.absolutePath
-                                        publicSourceDir = app.absolutePath
-                                    }
+                                val pkgInfo = if (isIn) pm.getPackageInfo(apkInfo.packageName, 0) else null
+
+                                val packageInfo =
                                     PackageInfo(
                                         name = apkInfo.applicationInfo!!.loadLabel(pm).toString(),
-                                        uid = null,
-                                        packageName = apkInfo.packageName,
+                                        uid = if (isIn) pkgInfo!!.applicationInfo!!.uid else null,
                                         versionName = apkInfo.versionName ?: "未知",
                                         versionCode = apkInfo.longVersionCode,
-                                        sourceDir = app!!.path,
+                                        packageName = apkInfo.packageName,
                                         icon = apkInfo.applicationInfo!!.loadIcon(pm),
+                                        sourceDir = if (isIn) pkgInfo!!.applicationInfo!!.sourceDir else app!!.path,
+                                        dataDir = if (isIn) pkgInfo!!.applicationInfo!!.dataDir else null
                                     )
-                                }
 
                                 Row(
                                     modifier = Modifier.padding(bottom = 16.dp),
@@ -1389,42 +1649,43 @@ fun TuralApp(
                                     }
                                 }
 
-                                HorizontalDivider(modifier = Modifier.width(230.dp))
+                                HorizontalDivider(modifier = Modifier.width(245.dp))
 
                                 Spacer(Modifier.height(8.dp))
 
                                 Column {
+                                    @Composable
+                                    fun InfoItem(title: String, summary: String) {
+                                        Row(modifier = Modifier.width(245.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(title)
+                                            Text(
+                                                text = summary,
+                                                softWrap = false,
+                                                modifier = Modifier
+                                                    .widthIn(max = 160.dp)
+                                                    .combinedClickable(
+                                                        onClick = {
+
+                                                        }
+                                                    ),
+                                                overflow = TextOverflow.MiddleEllipsis,
+                                                textAlign = TextAlign.End
+                                            )
+                                        }
+                                        Spacer(Modifier.height(4.dp))
+                                    }
                                     InfoItem("包名", packageInfo.packageName)
                                     InfoItem("版本号", packageInfo.versionCode.toString())
-                                    InfoItem("安装状态", if (isInstalled) "已安装" else "未安装")
-                                    InfoItem("大小", formatFileSize(File(packageInfo.sourceDir).length()))
-                                    if (isInstalled) {
+                                    InfoItem("安装状态", if (isIn) "已安装" else "未安装")
+                                    InfoItem("大小", formatFileSize(File(app!!.path).length()))
+                                    if (isIn) {
                                         InfoItem("数据目录", packageInfo.dataDir!!)
                                         InfoItem("安装目录", packageInfo.sourceDir)
                                         InfoItem("UID", packageInfo.uid.toString())
                                     }
                                 }
-
-                                when (loadType) {
-                                    ExtractProcess.LOADING -> {
-                                        LinearProgressIndicator(Modifier.width(230.dp))
-                                    }
-
-                                    ExtractProcess.NONE -> {}
-                                    ExtractProcess.ERROR -> {
-                                        Spacer(Modifier.height(16.dp))
-                                        Text("提取失败", color = MaterialTheme.colorScheme.error)
-                                    }
-
-                                    ExtractProcess.DONE -> {
-                                        Spacer(Modifier.height(16.dp))
-                                        Text(
-                                            "提取完成, 文件被保存在 $ExtractPath",
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.widthIn(max = 230.dp)
-                                        )
-                                    }
-                                }
+                            } else {
+                                Text("无法获取安装包信息", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleMedium)
                             }
                         }
                     },
@@ -1438,21 +1699,19 @@ fun TuralApp(
                         }
                         Button(
                             onClick = {
-
+                                install(context, checkedFile!!)
                             }
                         ) {
                             Text("安装")
                         }
                     },
                     dismissButton = {
-                        Row(Modifier.width(60.dp)) {
-                            OutlinedIconButton(
-                                onClick = {
+                        OutlinedButton(
+                            onClick = {
 
-                                }
-                            ) {
-                                Icon(painter = painterResource(R.drawable.outline_more_vert_24), null)
                             }
+                        ) {
+                            Text("功能")
                         }
                     }
                 )
@@ -1526,8 +1785,64 @@ fun TuralApp(
                         val pt = AXMLPrinter.print(checkedFile!!.path)
                         Text(
                             pt.toString(),
-                            modifier = Modifier.horizontalScroll(rememberScrollState()).verticalScroll(rememberScrollState())
+                            modifier = Modifier
+                                .horizontalScroll(rememberScrollState())
+                                .verticalScroll(rememberScrollState())
                         )
+                    }
+                )
+            }
+
+            if (showOpenModeDialog) {
+                AlertDialog(
+                    onDismissRequest = { showOpenModeDialog = false },
+                    confirmButton = {
+                        Button(
+                            onClick = { showOpenModeDialog = false }
+                        ) {
+                            Text("取消")
+                        }
+                    },
+                    text = {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            maxItemsInEachRow = 4
+                        ) {
+                            @Composable
+                            fun OpenModeItem(
+                                name: String,
+                                icon: Int
+                            ) {
+                                Surface(
+                                    onClick = {},
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = MaterialTheme.shapes.medium,
+                                    modifier = Modifier.width(60.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(vertical = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(icon),
+                                            contentDescription = null
+                                        )
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(name)
+                                    }
+                                }
+                            }
+                            OpenModeItem(name = "文本", icon = R.drawable.outline_description_24)
+                            OpenModeItem(name = "图片", icon = R.drawable.outline_image_24)
+                            OpenModeItem(name = "视频", icon = R.drawable.outline_video_file_24)
+                            OpenModeItem(name = "音频", icon = R.drawable.outline_audio_file_24)
+
+                            OpenModeItem(name = "安装包", icon = R.drawable.outline_android_24)
+                            OpenModeItem(name = "脚本", icon = R.drawable.outline_terminal_24)
+                            OpenModeItem(name = "字体", icon = R.drawable.outline_font_download_24)
+                            OpenModeItem(name = "压缩包", icon = R.drawable.outline_archive_24)
+                        }
                     }
                 )
             }
@@ -1586,8 +1901,7 @@ enum class LoadingType {
     NONE,
     FILE,
     DIRECTORY,
-    FILE_FAIL,
-    DIRECTORY_FAIL,
+    FAIL,
     PART_FAIL
 }
 

@@ -6,6 +6,8 @@
         tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+        tools:ignore="ProtectedPermissions" />
 
     <application
         android:allowBackup="true"
@@ -35,6 +37,10 @@
         <activity
             android:name=".OpenSourceActivity"
             android:exported="true" />
+        <activity
+            android:name=".TerminalActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustNothing"/>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

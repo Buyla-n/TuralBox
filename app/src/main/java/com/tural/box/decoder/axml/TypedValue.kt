@@ -13,31 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.tural.box.decoder.axml;
+package com.tural.box.decoder.axml
 
 /**
  * @author Dmitry Skiba
  *
  */
-public class TypedValue {
+class TypedValue {
+	var string: CharSequence? = null
+	var data: Int = 0
 
-    public CharSequence string;
-    public int data;
-
-    public static final int
-    	TYPE_REFERENCE			=1,
-    	TYPE_ATTRIBUTE			=2,
-    	TYPE_STRING				=3,
-    	TYPE_FLOAT				=4,
-    	TYPE_DIMENSION			=5,
-    	TYPE_FRACTION			=6,
-    	TYPE_FIRST_INT			=16,
-    	TYPE_INT_HEX			=17,
-    	TYPE_INT_BOOLEAN		=18,
-    	TYPE_FIRST_COLOR_INT	=28,
-    	TYPE_LAST_COLOR_INT		=31,
-    	TYPE_LAST_INT			=31;
-
-    public static final int
-	    COMPLEX_UNIT_MASK		=15;
+	companion object {
+		const val TYPE_REFERENCE = 1
+		const val TYPE_ATTRIBUTE = 2
+		const val TYPE_STRING = 3
+		const val TYPE_FLOAT = 4
+		const val TYPE_DIMENSION = 5
+		const val TYPE_FRACTION = 6
+		const val TYPE_FIRST_INT = 16
+		const val TYPE_INT_HEX = 17
+		const val TYPE_INT_BOOLEAN = 18
+		const val TYPE_FIRST_COLOR_INT = 28
+		const val TYPE_LAST_COLOR_INT = 31
+		const val TYPE_LAST_INT = 31
+		const val COMPLEX_UNIT_MASK = 15
+	}
 }
