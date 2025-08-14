@@ -21,7 +21,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,8 +43,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.BottomAppBar
@@ -118,7 +115,6 @@ import com.tural.box.OpenSourceActivity
 import com.tural.box.R
 import com.tural.box.TerminalActivity
 import com.tural.box.TextEditorActivity
-import com.tural.box.decoder.axml.AXMLPrinter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
@@ -187,12 +183,12 @@ fun TuralApp(
         }
     }
 
-    fun handleFileClick(file: File) {
+    fun handleFileClick(file: File, type: FileType? = null) {
         if (file.isDirectory) {
             currentPanelState().path = file.toPath()
         } else {
             currentFile = file
-            when(getFileType(file)) {
+            when(type ?: getFileType(file)) {
                 FileType.TEXT -> context.startActivity(Intent(context, TextEditorActivity::class.java).putExtra("filePath", file.path))
                 FileType.IMAGE -> context.startActivity(Intent(context, ImageActivity::class.java).putExtra("filePath", file.path))
                 FileType.INSTALL -> { dialogManager.showAppDetail = true }
@@ -541,7 +537,7 @@ fun TuralApp(
                                 file.name.equals(cps.highLightFiles.first(), ignoreCase = true)
                             }
                             if (index != -1) {
-                                leftLazyState.scrollToItem(index)
+                                rightLazyState.scrollToItem(index)
                             }
                         }
                     }
@@ -596,11 +592,9 @@ fun TuralApp(
                             FileItem(
                                 file = file,
                                 type = getFileType(file),
-                                highLight = leftPanelState.highLightFiles.any { it == file.name },
-                                onFileClick = { file ->
-                                    handleFileClick(file = file)
-                                },
-                                onFileLongClick = { handleFileLongClick(it) },
+                                highLight = file.name in leftPanelState.highLightFiles,
+                                onFileClick = { handleFileClick(file) },
+                                onFileLongClick = { handleFileLongClick(file) },
                             )
                         }
                     }
@@ -643,9 +637,9 @@ fun TuralApp(
                             FileItem(
                                 file = file,
                                 type = getFileType(file),
-                                highLight = leftPanelState.highLightFiles.any { it == file.name },
-                                onFileClick = { handleFileClick(file = it) },
-                                onFileLongClick = { handleFileLongClick(it) }
+                                highLight = file.name in rightPanelState.highLightFiles,
+                                onFileClick = { handleFileClick(file) },
+                                onFileLongClick = { handleFileLongClick(file) }
                             )
                         }
                     }
@@ -1196,13 +1190,12 @@ fun TuralApp(
                 )
             }
             if (dialogManager.showSort) {
-                val isLeft = currentPanel == PanelPosition.LEFT
                 var selectedSortOption by remember { mutableStateOf(SortOrder.NAME) } // 0=名称, 1=大小, 2=时间, 3=类型
                 selectedSortOption = currentPanelState().sortOrder
 
                 AlertDialog(
                     onDismissRequest = { dialogManager.showSort = false },
-                    title = { Text("排序 ${if (isLeft) "左" else "右"}") },
+                    title = { Text("排序 ${if (currentPanel == PanelPosition.LEFT) "左" else "右"}") },
                     text = {
                         Column {
                             // 选项1：按名称排序
@@ -1507,7 +1500,7 @@ fun TuralApp(
                                             },
                                             onFileLongClick = {
                                                 val cps = currentPanelState()
-                                                cps.highLightFiles = listOf(file.name)
+                                                cps.highLightFiles = setOf(file.name)
                                                 cps.path = Path(file.path)
                                                 dialogManager.showSearch = false
                                             }
@@ -1708,7 +1701,7 @@ fun TuralApp(
                                         )
                                         Spacer(Modifier.height(4.dp))
                                         Text(
-                                            text = "0.0.1 (SnapShot)",
+                                            text = "0.0.2 (SnapShot)",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
@@ -1758,10 +1751,14 @@ fun TuralApp(
                             @Composable
                             fun OpenModeItem(
                                 name: String,
-                                icon: Int
+                                icon: Int,
+                                type: FileType
                             ) {
                                 Surface(
-                                    onClick = {},
+                                    onClick = {
+                                        handleFileClick(currentFile!!, type)
+                                        dialogManager.showOpenMode = false
+                                    },
                                     color = MaterialTheme.colorScheme.primaryContainer,
                                     shape = MaterialTheme.shapes.medium,
                                     modifier = Modifier.width(60.dp)
@@ -1779,15 +1776,15 @@ fun TuralApp(
                                     }
                                 }
                             }
-                            OpenModeItem(name = "文本", icon = R.drawable.outline_description_24)
-                            OpenModeItem(name = "图片", icon = R.drawable.outline_image_24)
-                            OpenModeItem(name = "视频", icon = R.drawable.outline_video_file_24)
-                            OpenModeItem(name = "音频", icon = R.drawable.outline_audio_file_24)
+                            OpenModeItem(name = "文本", icon = R.drawable.outline_description_24, FileType.TEXT)
+                            OpenModeItem(name = "图片", icon = R.drawable.outline_image_24, FileType.IMAGE)
+                            OpenModeItem(name = "视频", icon = R.drawable.outline_video_file_24, FileType.VIDEO)
+                            OpenModeItem(name = "音频", icon = R.drawable.outline_audio_file_24, FileType.AUDIO)
 
-                            OpenModeItem(name = "安装包", icon = R.drawable.outline_android_24)
-                            OpenModeItem(name = "脚本", icon = R.drawable.outline_terminal_24)
-                            OpenModeItem(name = "字体", icon = R.drawable.outline_font_download_24)
-                            OpenModeItem(name = "压缩包", icon = R.drawable.outline_archive_24)
+                            OpenModeItem(name = "安装包", icon = R.drawable.outline_android_24, FileType.INSTALL)
+                            OpenModeItem(name = "脚本", icon = R.drawable.outline_terminal_24, FileType.SHELL)
+                            OpenModeItem(name = "字体", icon = R.drawable.outline_font_download_24, FileType.FILE)
+                            OpenModeItem(name = "压缩包", icon = R.drawable.outline_archive_24, FileType.PACKAGE)
                         }
                     }
                 )

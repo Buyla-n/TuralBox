@@ -31,8 +31,8 @@ fun FileItem(
     type: FileType,
     highLight: Boolean = false,
     selected: Boolean = false,
-    onFileClick: (File) -> Unit,
-    onFileLongClick: (File) -> Unit
+    onFileClick: () -> Unit,
+    onFileLongClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -41,10 +41,10 @@ fun FileItem(
             )
             .combinedClickable(
                 onClick = {
-                    onFileClick(file)
+                    onFileClick()
                 },
                 onLongClick = {
-                    onFileLongClick(file)
+                    onFileLongClick()
                 }
             )
             .fillMaxWidth()

@@ -35,6 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,8 +43,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -89,6 +90,7 @@ fun AppExtract(){
     var showAppDetailDialog by remember { mutableStateOf(false) }
     var searchActive by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(true) }
     val pm = context.packageManager
     val scope = rememberCoroutineScope()
 
@@ -201,8 +203,9 @@ fun AppExtract(){
         contentWindowInsets = WindowInsets(0,0,0,0)
     ) { contentPadding ->
         Column(modifier = Modifier.padding(contentPadding)) {
-            SecondaryTabRow(
+            PrimaryTabRow(
                 selectedTabIndex = selectedDestination.ordinal,
+                containerColor = MaterialTheme.colorScheme.primaryContainer
             ) {
                 Destination.entries.forEachIndexed { index, destination ->
                     Tab(
@@ -238,6 +241,7 @@ fun AppExtract(){
                         0
                     ).flags and ApplicationInfo.FLAG_SYSTEM) != 0
                 }
+                isLoading = false
             }
 
             fun handleAppClick(
@@ -247,36 +251,40 @@ fun AppExtract(){
                 showAppDetailDialog = true
             }
 
-            AnimatedContent(
-                targetState = selectedDestination
-            ) { it ->
-                when (it) {
-                    Destination.USER -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(filteredUserApps) { app ->
-                                AppItem(app, pm) { handleAppClick(it) }
-                            }
-                            item {
-                                Spacer(Modifier.height(16.dp))
+            if (!isLoading) {
+                AnimatedContent(
+                    targetState = selectedDestination
+                ) { it ->
+                    when (it) {
+                        Destination.USER -> {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(filteredUserApps) { app ->
+                                    AppItem(app, pm) { handleAppClick(it) }
+                                }
+                                item {
+                                    Spacer(Modifier.height(16.dp))
+                                }
                             }
                         }
-                    }
 
-                    Destination.SYSTEM -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(filteredSystemApps) { app ->
-                                AppItem(app, pm) { handleAppClick(it) }
-                            }
-                            item {
-                                Spacer(Modifier.height(16.dp))
+                        Destination.SYSTEM -> {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(filteredSystemApps) { app ->
+                                    AppItem(app, pm) { handleAppClick(it) }
+                                }
+                                item {
+                                    Spacer(Modifier.height(16.dp))
+                                }
                             }
                         }
                     }
                 }
+            } else {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) { CircularProgressIndicator() }
             }
 
             if (showAppDetailDialog) {
