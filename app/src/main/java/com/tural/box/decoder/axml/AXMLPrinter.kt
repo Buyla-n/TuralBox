@@ -26,6 +26,12 @@ import java.io.FileInputStream
  */
 object AXMLPrinter {
 
+	const val START_DOCUMENT = 0
+	const val END_DOCUMENT = 1
+	const val START_TAG = 2
+	const val END_TAG = 3
+	const val TEXT = 4
+
 	fun print(path: String): String {
 		if (path.isEmpty()) {
 			return "Usage: AXMLPrinter <binary xml file>"
@@ -39,15 +45,15 @@ object AXMLPrinter {
 			var type: Int
             while (true) {
 				type = parser.next()
-                if (type== XmlPullParser.END_DOCUMENT) {
+                if (type== END_DOCUMENT) {
 					break
                 }
 				when (type) {
-					XmlPullParser.START_DOCUMENT -> {
+					START_DOCUMENT -> {
 						result.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
 					}
 
-					XmlPullParser.START_TAG -> {
+					START_TAG -> {
 						result.append(
 							String.format(
 								"%s<%s%s\n",
@@ -88,7 +94,7 @@ object AXMLPrinter {
 						result.append(">\n")
 					}
 
-					XmlPullParser.END_TAG -> {
+					END_TAG -> {
 						indent.setLength(indent.length - indentStep.length)
 						result.append(
 							String.format(
@@ -100,7 +106,7 @@ object AXMLPrinter {
 						)
 					}
 
-					XmlPullParser.TEXT -> {
+					TEXT -> {
 						result.append(String.format("%s%s\n", indent, parser.getText()))
 					}
 				}

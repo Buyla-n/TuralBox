@@ -1784,7 +1784,7 @@ fun TuralApp(
                     text = {
                         val pt = AXMLPrinter.print(checkedFile!!.path)
                         Text(
-                            pt.toString(),
+                            pt,
                             modifier = Modifier
                                 .horizontalScroll(rememberScrollState())
                                 .verticalScroll(rememberScrollState())

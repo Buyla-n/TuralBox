@@ -335,7 +335,10 @@ class AXmlResourceParser {
 	private fun doNext() {
 		// Delayed initialization.
 		if (strings==null) {
-			readCheckType(reader!!,CHUNK_AXML_FILE)
+			val type = reader!!.readInt()
+			require(type == CHUNK_AXML_FILE) {
+				"Expected chunk of type 0x${CHUNK_AXML_FILE.toHexString()}, read 0x${type.toHexString()}."
+			}
 			reader!!.skipInt() //chunkSize
 			strings= StringBlock.Companion.read(reader!!)
 			namespaces.increaseDepth()
