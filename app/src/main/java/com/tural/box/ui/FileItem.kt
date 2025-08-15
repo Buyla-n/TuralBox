@@ -138,5 +138,6 @@ enum class FileType {
     PACKAGE,
     INSTALL,
     XML,
-    SHELL
+    SHELL,
+    FONT
 }

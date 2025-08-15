@@ -44,6 +44,12 @@
             android:name=".TerminalActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustNothing"/>
+        <activity
+            android:name=".FontActivity"
+            android:exported="true" />
+        <activity
+            android:name=".VideoActivity"
+            android:exported="true" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

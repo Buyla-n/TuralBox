@@ -89,9 +89,14 @@ fun OpenSourceScreen(onBackPressed: () -> Unit) {
             website = "https://github.com/jvziyaoyao/scale"
         ),
         Library(
-            name = "ExoPlayer",
+            name = "Media3 ExoPlayer",
             license = "Apache 2.0",
-            website = "https://github.com/google/ExoPlayer"
+            website = "https://github.com/androidx/media"
+        ),
+        Library(
+            name = "Media3 UI",
+            license = "Apache 2.0",
+            website = "https://github.com/androidx/media"
         )
     )
 

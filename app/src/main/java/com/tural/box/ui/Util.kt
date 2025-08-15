@@ -38,6 +38,7 @@ fun getFileIcon(type: FileType) : Int {
         FileType.INSTALL -> R.drawable.outline_android_24
         FileType.XML -> R.drawable.outline_description_24
         FileType.SHELL -> R.drawable.outline_description_24
+        FileType.FONT -> R.drawable.outline_font_download_24
         else -> R.drawable.outline_insert_drive_file_24
     }
 }
@@ -69,6 +70,7 @@ fun getFileType(file: File): FileType {
         "mp3", "wav", "ogg" -> FileType.AUDIO
         "mp4" -> FileType.VIDEO
         "sh" -> FileType.SHELL
+        "ttf", "otf" -> FileType.FONT
         "apk" -> FileType.INSTALL
         "xml" -> FileType.XML
         "zip", "rar", "7z" -> FileType.PACKAGE

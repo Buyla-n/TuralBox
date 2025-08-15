@@ -54,10 +54,13 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -110,11 +113,13 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
 import com.tural.box.AppExtractActivity
+import com.tural.box.FontActivity
 import com.tural.box.ImageActivity
 import com.tural.box.OpenSourceActivity
 import com.tural.box.R
 import com.tural.box.TerminalActivity
 import com.tural.box.TextEditorActivity
+import com.tural.box.VideoActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
@@ -197,6 +202,8 @@ fun TuralApp(
                 FileType.IMAGE -> context.startActivity(Intent(context, ImageActivity::class.java).putExtra("filePath", file.path))
                 FileType.INSTALL -> { dialogManager.showAppDetail = true }
                 FileType.XML -> context.startActivity(Intent(context, TextEditorActivity::class.java).putExtra("filePath", file.path))
+                FileType.FONT -> context.startActivity(Intent(context, FontActivity::class.java).putExtra("filePath", file.path))
+                FileType.VIDEO -> context.startActivity(Intent(context, VideoActivity::class.java).putExtra("filePath", file.path))
                 FileType.AUDIO -> { dialogManager.showAudio = true }
                 else -> { dialogManager.showOpenMode = true }
             }
@@ -1201,65 +1208,34 @@ fun TuralApp(
                     onDismissRequest = { dialogManager.showSort = false },
                     title = { Text("排序 ${if (currentPanel == PanelPosition.LEFT) "左" else "右"}") },
                     text = {
-                        Column {
-                            // 选项1：按名称排序
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedSortOption = SortOrder.NAME }
-                                    .padding(horizontal = 8.dp)
-                            ) {
-                                RadioButton(
-                                    selected = selectedSortOption == SortOrder.NAME,
-                                    onClick = { selectedSortOption = SortOrder.NAME }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        ) {
+                            listOf(
+                                SortOrder.NAME to "名称排序",
+                                SortOrder.SIZE to "大小排序",
+                                SortOrder.TIME to "时间排序",
+                                SortOrder.TYPE to "类型排序"
+                            ).forEach { (order, text) ->
+                                ListItem(
+                                    headlineContent = { Text(text) },
+                                    leadingContent = {
+                                        RadioButton(
+                                            selected = selectedSortOption == order,
+                                            onClick = { selectedSortOption = order }
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedSortOption = order }
+                                        .padding(),
+                                    colors = ListItemDefaults.colors(
+                                        containerColor = Color.Transparent
+                                    )
                                 )
-                                Text("名称排序", modifier = Modifier.padding(start = 8.dp))
-                            }
-
-                            // 选项2：按大小排序
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedSortOption = SortOrder.SIZE }
-                                    .padding(horizontal = 8.dp)
-                            ) {
-                                RadioButton(
-                                    selected = selectedSortOption == SortOrder.SIZE,
-                                    onClick = { selectedSortOption = SortOrder.SIZE }
-                                )
-                                Text("大小排序", modifier = Modifier.padding(start = 8.dp))
-                            }
-
-                            // 选项3：按时间排序
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedSortOption = SortOrder.TIME }
-                                    .padding(horizontal = 8.dp)
-                            ) {
-                                RadioButton(
-                                    selected = selectedSortOption == SortOrder.TIME,
-                                    onClick = { selectedSortOption = SortOrder.TIME }
-                                )
-                                Text("时间排序", modifier = Modifier.padding(start = 8.dp))
-                            }
-
-                            // 选项4：按类型排序
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedSortOption = SortOrder.TYPE }
-                                    .padding(horizontal = 8.dp)
-                            ) {
-                                RadioButton(
-                                    selected = selectedSortOption == SortOrder.TYPE,
-                                    onClick = { selectedSortOption = SortOrder.TYPE }
-                                )
-                                Text("类型排序", modifier = Modifier.padding(start = 8.dp))
+                                HorizontalDivider()
                             }
                         }
                     },
@@ -1414,9 +1390,9 @@ fun TuralApp(
                                     override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
                                         return try {
                                             FileVisitResult.CONTINUE
-                                        } catch (e: AccessDeniedException) {
+                                        } catch (_: AccessDeniedException) {
                                             FileVisitResult.SKIP_SUBTREE
-                                        } catch (e: SecurityException) {
+                                        } catch (_: SecurityException) {
                                             FileVisitResult.SKIP_SUBTREE
                                         }
                                     }
@@ -1441,9 +1417,9 @@ fun TuralApp(
                                     override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
                                         return try {
                                             FileVisitResult.CONTINUE
-                                        } catch (e: AccessDeniedException) {
+                                        } catch (_: AccessDeniedException) {
                                             FileVisitResult.SKIP_SUBTREE
-                                        } catch (e: SecurityException) {
+                                        } catch (_: SecurityException) {
                                             FileVisitResult.SKIP_SUBTREE
                                         }
                                     }
@@ -1460,7 +1436,7 @@ fun TuralApp(
                                             if (file.fileName.toString().contains(searchFileName, true)) {
                                                 finded.add(file.toFile())
                                             }
-                                        } catch (e: Exception) {
+                                        } catch (_: Exception) {
                                             // 忽略单个文件的错误
                                         }
                                         return FileVisitResult.CONTINUE
@@ -1484,7 +1460,7 @@ fun TuralApp(
                                             if (path.fileName.toString().contains(searchFileName, true)) {
                                                 finded.add(path.toFile())
                                             }
-                                        } catch (e: Exception) {
+                                        } catch (_: Exception) {
                                             // 忽略单个文件的错误
                                         }
                                     }
@@ -1831,7 +1807,7 @@ fun TuralApp(
 
                             OpenModeItem(name = "安装包", icon = R.drawable.outline_android_24, FileType.INSTALL)
                             OpenModeItem(name = "脚本", icon = R.drawable.outline_terminal_24, FileType.SHELL)
-                            OpenModeItem(name = "字体", icon = R.drawable.outline_font_download_24, FileType.FILE)
+                            OpenModeItem(name = "字体", icon = R.drawable.outline_font_download_24, FileType.FONT)
                             OpenModeItem(name = "压缩包", icon = R.drawable.outline_archive_24, FileType.PACKAGE)
                         }
                     }
