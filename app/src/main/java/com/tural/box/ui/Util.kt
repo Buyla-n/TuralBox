@@ -6,7 +6,6 @@ import android.content.Intent
 import android.provider.Settings
 import android.webkit.MimeTypeMap
 import android.widget.Toast
-import androidx.compose.runtime.remember
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import com.tural.box.R
@@ -34,10 +33,10 @@ fun getFileIcon(type: FileType) : Int {
         FileType.AUDIO -> R.drawable.outline_audio_file_24
         FileType.IMAGE -> R.drawable.outline_image_24
         FileType.VIDEO -> R.drawable.outline_video_file_24
-        FileType.PACKAGE -> R.drawable.outline_folder_zip_24
-        FileType.INSTALL -> R.drawable.outline_android_24
+        FileType.ARCHIVE -> R.drawable.outline_folder_zip_24
+        FileType.INSTALLABLE -> R.drawable.outline_android_24
         FileType.XML -> R.drawable.outline_description_24
-        FileType.SHELL -> R.drawable.outline_description_24
+        FileType.SCRIPT -> R.drawable.outline_description_24
         FileType.FONT -> R.drawable.outline_font_download_24
         else -> R.drawable.outline_insert_drive_file_24
     }
@@ -63,26 +62,94 @@ fun accessFiles(path: Path, sortOrder: SortOrder): List<File> {
     }
 }
 
+//fun accessArchiveEntry(zipFile: File, path: Path, sortOrder: SortOrder): List<File> {
+//    try {
+//        SevenZip.initSevenZipFromPlatformJAR()
+//        val innerPath = parseZipPath(path.pathString)
+//        val archiveEntries = mutableListOf<File>()
+//
+//        RandomAccessFile(zipFile.path, "r").use { raf ->
+//            SevenZip.openInArchive(null, RandomAccessFileInStream(raf)).use { inArchive ->
+//                for (i in 0 until inArchive.numberOfItems) {
+//                    archiveEntries.add(createVirtualFile(i, zipFile, inArchive, "$innerPath/"))
+//                }
+//            }
+//        }
+//
+////        ZipFile(zipFile).use { zip ->
+////            val entries: Enumeration<ZipArchiveEntry> = zip.entries
+////
+////            while (entries.hasMoreElements()) {
+////                val entry = entries.nextElement()
+////                val name = entry.name.removePrefix(innerPath + "/")
+////                val name2 = if (!entry.isDirectory) name + "/" else name
+////
+////                archiveEntries.add(createVirtualFile(zipFile, entry, "$innerPath/"))
+////            }
+////        }
+//
+//
+//        return archiveEntries.sortedWith(
+//            compareBy<File> { !it.isDirectory }
+//                .then(
+//                    when (sortOrder) {
+//                        SortOrder.NAME -> compareBy { it.name.lowercase() }
+//                        SortOrder.TYPE -> compareBy { it.extension.lowercase() }
+//                        SortOrder.SIZE -> compareBy { it.length() }
+//                        SortOrder.TIME -> compareByDescending { it.lastModified() }
+//                    }
+//                )
+//        )
+//    } catch (e: Exception) {
+//        e.printStackTrace()
+//        return emptyList()
+//    }
+//}
+//
+//private fun createVirtualFile(i: Int, zipFile: File, entry: IInArchive, innerPath: String): File {
+//    val name = entry.getProperty(i, PropID.NAME) as String
+//    return object : File("${zipFile.path}${separator}${name}") {
+//        override fun exists(): Boolean = true
+//        override fun isDirectory(): Boolean = entry.getProperty(i, PropID.IS_FOLDER) as Boolean
+//        override fun isFile(): Boolean = !(entry.getProperty(i, PropID.IS_FOLDER) as Boolean)
+//        override fun length(): Long = entry.getProperty(i, PropID.SIZE) as Long
+//        override fun getName(): String = name.removePrefix(innerPath).removeSuffix("/")
+//        override fun getPath(): String = zipFile.path + "/" + name
+//
+//        override fun toString(): String {
+//            return "ZipEntryFile[name=${getName()}, path=${zipFile.path + "/" + name}, " +
+//                    "size=${length()}, isDir=$isDirectory]"
+//        }
+//    }
+//}
+//
+//fun parseZipPath(zipPath: String): String {
+//    val zipFileEndIndex = zipPath.indexOf(".zip") + 4
+//    val innerPath = zipPath.substring(zipFileEndIndex).removePrefix("/")
+//    return innerPath
+//}
+
+
 fun getFileType(file: File): FileType {
     return if (file.isDirectory) FileType.FOLDER else when (file.extension.lowercase()) {
         "txt" -> FileType.TEXT
         "jpg", "jpeg", "png", "gif", "webp" -> FileType.IMAGE
         "mp3", "wav", "ogg" -> FileType.AUDIO
         "mp4" -> FileType.VIDEO
-        "sh" -> FileType.SHELL
+        "sh" -> FileType.SCRIPT
         "ttf", "otf" -> FileType.FONT
-        "apk" -> FileType.INSTALL
+        "apk" -> FileType.INSTALLABLE
         "xml" -> FileType.XML
-        "zip", "rar", "7z" -> FileType.PACKAGE
+        "zip", "rar", "7z" -> FileType.ARCHIVE
         else -> FileType.FILE
     }
 }
 
 fun formatFileSize(sizeInBytes: Long): String {
     return when {
-        sizeInBytes < 1024 -> "$sizeInBytes B"
-        sizeInBytes < 1024 * 1024 -> "%.1f KB".format(sizeInBytes / 1024.0)
-        sizeInBytes < 1024 * 1024 * 1024 -> "%.1f MB".format(sizeInBytes / (1024.0 * 1024.0))
+        sizeInBytes < 0x400 -> "$sizeInBytes B"
+        sizeInBytes < 0x100000 -> "%.1f KB".format(sizeInBytes / 1024.0)
+        sizeInBytes < 0x40000000 -> "%.1f MB".format(sizeInBytes / (1024.0 * 1024.0))
         else -> "%.1f GB".format(sizeInBytes / (1024.0 * 1024.0 * 1024.0))
     }
 }
@@ -130,13 +197,13 @@ fun deleteFile(file: File): Boolean {
     }
 }
 
-fun deleteFolder(folder: File): Flow<DeleteProgress> = flow {
+fun deleteFolder(folder: File): Flow<FileChangeProgress> = flow {
     require(folder.isDirectory) { "Path must be a directory" }
 
     val allFiles = folder.walkBottomUp().toList()
     val totalCount = allFiles.size
     if (totalCount == 0) {
-        emit(DeleteProgress.Completed(0, true))
+        emit(FileChangeProgress.Completed(0, true))
         return@flow
     }
 
@@ -160,23 +227,23 @@ fun deleteFolder(folder: File): Flow<DeleteProgress> = flow {
                 else -> failedCount++
             }
 
-            emit(DeleteProgress.InProgress(
+            emit(FileChangeProgress.InProgress(
                 current = index + 1,
                 total = totalCount,
                 percentage = ((index + 1) * 100 / totalCount).coerceAtMost(100),
-                deletedCount = successCount,
+                successCount = successCount,
                 failedCount = failedCount
             ))
         } catch (e: Exception) {
             failedCount++
-            emit(DeleteProgress.Error(e, file))
+            emit(FileChangeProgress.Error(e, file))
         }
     }
     // 最终结果
-    emit(DeleteProgress.Completed(successCount, failedCount == 0))
+    emit(FileChangeProgress.Completed(successCount, failedCount == 0))
 }.flowOn(Dispatchers.IO) // 在IO线程执行
 
-fun copyFolder(sourceFolder: File, targetFolder: File): Flow<DeleteProgress> = flow {
+fun copyFolder(sourceFolder: File, targetFolder: File): Flow<FileChangeProgress> = flow {
     require(sourceFolder.isDirectory) { "Source path must be a directory" }
     if (!targetFolder.exists()) {
         targetFolder.mkdirs()
@@ -185,7 +252,7 @@ fun copyFolder(sourceFolder: File, targetFolder: File): Flow<DeleteProgress> = f
     val allFiles = sourceFolder.walkTopDown().toList()
     val totalCount = allFiles.size
     if (totalCount == 0) {
-        emit(DeleteProgress.Completed(0, true))
+        emit(FileChangeProgress.Completed(0, true))
         return@flow
     }
 
@@ -213,40 +280,40 @@ fun copyFolder(sourceFolder: File, targetFolder: File): Flow<DeleteProgress> = f
                 else -> failedCount++
             }
 
-            emit(DeleteProgress.InProgress(
+            emit(FileChangeProgress.InProgress(
                 current = index + 1,
                 total = totalCount,
                 percentage = ((index + 1) * 100 / totalCount).coerceAtMost(100),
-                deletedCount = successCount,
+                successCount = successCount,
                 failedCount = failedCount
             ))
         } catch (e: Exception) {
             failedCount++
-            emit(DeleteProgress.Error(e, sourceFile))
+            emit(FileChangeProgress.Error(e, sourceFile))
         }
     }
     // Final result
-    emit(DeleteProgress.Completed(successCount, failedCount == 0))
+    emit(FileChangeProgress.Completed(successCount, failedCount == 0))
 }.flowOn(Dispatchers.IO)
 
-sealed class DeleteProgress {
+sealed class FileChangeProgress {
     data class InProgress(
         val current: Int,
         val total: Int,
         val percentage: Int,
-        val deletedCount: Int,
+        val successCount: Int,
         val failedCount: Int,
-    ) : DeleteProgress()
+    ) : FileChangeProgress()
 
     data class Completed(
-        val deletedCount: Int,
+        val successCount: Int,
         val isAllSuccess: Boolean
-    ) : DeleteProgress()
+    ) : FileChangeProgress()
 
     data class Error(
         val exception: Exception,
         val failedFile: File
-    ) : DeleteProgress()
+    ) : FileChangeProgress()
 }
 
 fun createFolder(directory: Path, folderName: String): Boolean {

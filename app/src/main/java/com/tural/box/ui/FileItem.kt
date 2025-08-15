@@ -89,6 +89,10 @@ fun UpwardItem(
 ) {
     Surface(
         onClick = {
+//            if (parseZipPath(cps.path.pathString).isEmpty() && cps.isInZip) {
+//                cps.isInZip = false
+//                cps.zipFile = null
+//            }
             if (cps.path.pathString != "/storage/emulated/0") cps.path = cps.path.parent
         },
         color = Color.Transparent
@@ -135,9 +139,9 @@ enum class FileType {
     AUDIO,
     IMAGE,
     VIDEO,
-    PACKAGE,
-    INSTALL,
+    ARCHIVE,
+    INSTALLABLE,
     XML,
-    SHELL,
+    SCRIPT,
     FONT
 }

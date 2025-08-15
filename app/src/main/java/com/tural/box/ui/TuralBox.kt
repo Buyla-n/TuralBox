@@ -54,7 +54,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -173,7 +172,11 @@ fun TuralApp(
 
     fun handleBack() {
         val cps = currentPanelState()
-        if (!currentPath.isRootPath()){
+//        if (parseZipPath(cps.path.pathString).isEmpty() && cps.isInZip) {
+//            cps.isInZip = false
+//            cps.zipFile = null
+//        }
+        if (!currentPath.isRootPath()) {
             cps.path = cps.path.parent
         }
     }
@@ -200,11 +203,18 @@ fun TuralApp(
             when(type ?: getFileType(file)) {
                 FileType.TEXT -> context.startActivity(Intent(context, TextEditorActivity::class.java).putExtra("filePath", file.path))
                 FileType.IMAGE -> context.startActivity(Intent(context, ImageActivity::class.java).putExtra("filePath", file.path))
-                FileType.INSTALL -> { dialogManager.showAppDetail = true }
+                FileType.INSTALLABLE -> { dialogManager.showAppDetail = true }
                 FileType.XML -> context.startActivity(Intent(context, TextEditorActivity::class.java).putExtra("filePath", file.path))
                 FileType.FONT -> context.startActivity(Intent(context, FontActivity::class.java).putExtra("filePath", file.path))
                 FileType.VIDEO -> context.startActivity(Intent(context, VideoActivity::class.java).putExtra("filePath", file.path))
                 FileType.AUDIO -> { dialogManager.showAudio = true }
+                FileType.ARCHIVE -> {
+                    val cps = currentPanelState()
+                    cps.zipFile = file
+                    cps.previousPath = cps.path
+                    cps.isInZip = true
+                    cps.path = Path("${file.path}")
+                }
                 else -> { dialogManager.showOpenMode = true }
             }
         }
@@ -332,17 +342,19 @@ fun TuralApp(
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(
-                            text = currentPath.pathString,
-                            maxLines = 1,
-                            overflow = TextOverflow.StartEllipsis,
-                            softWrap = false,
-                            modifier = Modifier.clickable(
-                                onClick = {
-                                    dialogManager.showPath = true
-                                }
+                        Column {
+                            Text(
+                                text = currentPath.pathString,
+                                maxLines = 1,
+                                overflow = TextOverflow.StartEllipsis,
+                                softWrap = false,
+                                modifier = Modifier.clickable(
+                                    onClick = {
+                                        dialogManager.showPath = true
+                                    }
+                                )
                             )
-                        )
+                        }
                     },
                     navigationIcon = {
                         IconButton(
@@ -516,7 +528,11 @@ fun TuralApp(
                         cps.path = cps.path.parent
                     }
                     scope.launch(Dispatchers.IO) {
-                        cps.files = accessFiles(cps.path, cps.sortOrder)
+                        //if (!cps.isInZip) {
+                            cps.files = accessFiles(cps.path, cps.sortOrder)
+//                        } else {
+//                            cps.files = accessArchiveEntry(cps.zipFile!!, cps.path, cps.sortOrder)
+//                        }
                     }.join()
 
                     scope.launch(Dispatchers.Main) {
@@ -538,7 +554,11 @@ fun TuralApp(
                         cps.path = cps.path.parent
                     }
                     scope.launch(Dispatchers.IO) {
-                        cps.files = accessFiles(cps.path, cps.sortOrder)
+                        //if (!cps.isInZip) {
+                            cps.files = accessFiles(cps.path, cps.sortOrder)
+//                        } else {
+//                            cps.files = accessArchiveEntry(cps.zipFile!!, cps.path, cps.sortOrder)
+//                        }
                     }.join()
 
                     scope.launch(Dispatchers.Main) {
@@ -787,7 +807,7 @@ fun TuralApp(
                 )
             }
             if (dialogManager.showDelete) {
-                var progress by remember { mutableStateOf<DeleteProgress?>(null) }
+                var progress by remember { mutableStateOf<FileChangeProgress?>(null) }
                 var loadingType by remember { mutableStateOf(LoadingType.NONE) }
                 AlertDialog(
                     modifier = Modifier.width(560.dp),
@@ -817,7 +837,7 @@ fun TuralApp(
                             Spacer(Modifier.height(8.dp))
 
                             when (val current = progress) {
-                                is DeleteProgress.InProgress -> {
+                                is FileChangeProgress.InProgress -> {
 
                                     LinearProgressIndicator(
                                         progress = { current.percentage / 100f },
@@ -833,11 +853,11 @@ fun TuralApp(
                                     }
                                 }
 
-                                is DeleteProgress.Error -> {
+                                is FileChangeProgress.Error -> {
                                     loadingType == LoadingType.FAIL
                                 }
 
-                                is DeleteProgress.Completed -> {
+                                is FileChangeProgress.Completed -> {
                                     if (current.isAllSuccess) {
                                         dialogManager.showDelete = false
                                         refresh()
@@ -865,7 +885,7 @@ fun TuralApp(
                                             deleteFolder(currentFile!!)
                                                 .catch { e ->
                                                     loadingType = LoadingType.FAIL
-                                                    progress = DeleteProgress.Error(
+                                                    progress = FileChangeProgress.Error(
                                                         e as Exception,
                                                         currentFile!!
                                                     )
@@ -904,7 +924,7 @@ fun TuralApp(
                 )
             }
             if (dialogManager.showCopy) {
-                var progress by remember { mutableStateOf<DeleteProgress?>(null) }
+                var progress by remember { mutableStateOf<FileChangeProgress?>(null) }
                 var loadingType by remember { mutableStateOf(LoadingType.NONE) }
                 AlertDialog(
                     modifier = Modifier.width(560.dp),
@@ -929,7 +949,7 @@ fun TuralApp(
                             Spacer(Modifier.height(8.dp))
 
                             when (val current = progress) {
-                                is DeleteProgress.InProgress -> {
+                                is FileChangeProgress.InProgress -> {
 
                                     LinearProgressIndicator(
                                         progress = { current.percentage / 100f },
@@ -945,11 +965,11 @@ fun TuralApp(
                                     }
                                 }
 
-                                is DeleteProgress.Error -> {
+                                is FileChangeProgress.Error -> {
                                     loadingType == LoadingType.FAIL
                                 }
 
-                                is DeleteProgress.Completed -> {
+                                is FileChangeProgress.Completed -> {
                                     if (current.isAllSuccess) {
                                         dialogManager.showCopy = false
                                         negativeRefresh()
@@ -977,7 +997,7 @@ fun TuralApp(
                                             copyFolder(currentFile!!, File("$negativePath/${currentFile!!.name}"))
                                                 .catch { e ->
                                                     loadingType = LoadingType.FAIL
-                                                    progress = DeleteProgress.Error(
+                                                    progress = FileChangeProgress.Error(
                                                         e as Exception,
                                                         currentFile!!
                                                     )
@@ -1016,7 +1036,7 @@ fun TuralApp(
                 )
             }
             if (dialogManager.showMove) {
-                var progress by remember { mutableStateOf<DeleteProgress?>(null) }
+                var progress by remember { mutableStateOf<FileChangeProgress?>(null) }
                 var loadingType by remember { mutableStateOf(LoadingType.NONE) }
                 AlertDialog(
                     modifier = Modifier.width(560.dp),
@@ -1041,7 +1061,7 @@ fun TuralApp(
                             Spacer(Modifier.height(8.dp))
 
                             when (val current = progress) {
-                                is DeleteProgress.InProgress -> {
+                                is FileChangeProgress.InProgress -> {
 
                                     LinearProgressIndicator(
                                         progress = { current.percentage / 100f },
@@ -1057,11 +1077,11 @@ fun TuralApp(
                                     }
                                 }
 
-                                is DeleteProgress.Error -> {
+                                is FileChangeProgress.Error -> {
                                     loadingType == LoadingType.FAIL
                                 }
 
-                                is DeleteProgress.Completed -> {
+                                is FileChangeProgress.Completed -> {
                                     if (current.isAllSuccess) {
                                         dialogManager.showMove = false
                                         negativeRefresh()
@@ -1805,10 +1825,10 @@ fun TuralApp(
                             OpenModeItem(name = "视频", icon = R.drawable.outline_video_file_24, FileType.VIDEO)
                             OpenModeItem(name = "音频", icon = R.drawable.outline_audio_file_24, FileType.AUDIO)
 
-                            OpenModeItem(name = "安装包", icon = R.drawable.outline_android_24, FileType.INSTALL)
-                            OpenModeItem(name = "脚本", icon = R.drawable.outline_terminal_24, FileType.SHELL)
+                            OpenModeItem(name = "安装包", icon = R.drawable.outline_android_24, FileType.INSTALLABLE)
+                            OpenModeItem(name = "脚本", icon = R.drawable.outline_terminal_24, FileType.SCRIPT)
                             OpenModeItem(name = "字体", icon = R.drawable.outline_font_download_24, FileType.FONT)
-                            OpenModeItem(name = "压缩包", icon = R.drawable.outline_archive_24, FileType.PACKAGE)
+                            OpenModeItem(name = "压缩包", icon = R.drawable.outline_archive_24, FileType.ARCHIVE)
                         }
                     }
                 )

@@ -69,4 +69,6 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.image.viewer)
     implementation(libs.androidx.media3.exoplayer)
+    implementation("net.sf.sevenzipjbinding:sevenzipjbinding:16.02-2.01")
+    implementation("net.sf.sevenzipjbinding:sevenzipjbinding-linux-arm64:16.02-2.01")
 }

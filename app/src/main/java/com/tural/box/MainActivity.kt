@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.tural.box.ui.TuralApp
 import com.tural.box.ui.theme.TuralBoxTheme
+import net.sf.sevenzipjbinding.SevenZip
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
