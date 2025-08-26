@@ -22,7 +22,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.tural.box.R
 import java.io.File
-import kotlin.io.path.pathString
+import java.nio.file.Files
+import kotlin.io.path.Path
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -74,11 +75,22 @@ fun FileItem(
                 style = MaterialTheme.typography.titleSmall,
                 color = if (!highLight) Color.Unspecified else MaterialTheme.colorScheme.primary
             )
-            if (file.isFile)
+            if (file.isFile) {
                 Text(
                     text = formatFileSize(file.length()),
                     style = MaterialTheme.typography.bodySmall
                 )
+            }
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        if (Files.isSymbolicLink(Path(file.path))) {
+            Icon(
+                painter = painterResource(R.drawable.baseline_insert_link_24),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline
+            )
         }
     }
 }
@@ -93,7 +105,7 @@ fun UpwardItem(
 //                cps.isInZip = false
 //                cps.zipFile = null
 //            }
-            if (cps.path.pathString != "/storage/emulated/0") cps.path = cps.path.parent
+            if (!cps.path.isRootPath()) cps.path = cps.path.parent
         },
         color = Color.Transparent
     ) {

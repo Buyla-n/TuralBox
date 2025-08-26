@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
 import java.net.URLConnection
 import java.nio.file.Files
@@ -23,7 +24,7 @@ import kotlin.io.path.pathString
 
 const val RootPath = "/storage/emulated/0"
 const val ExtractPath = "/storage/emulated/0/TuralBox/Extract"
-
+var rootMode = false
 val invalidChars = listOf('/', '\\', ':', '*', '?', '"', '<', '>', '|')
 
 fun getFileIcon(type: FileType) : Int {
@@ -44,8 +45,19 @@ fun getFileIcon(type: FileType) : Int {
 
 fun accessFiles(path: Path, sortOrder: SortOrder): List<File> {
     try {
-        val files = path.toFile().listFiles()?.toList()
-        return files!!.sortedWith(
+        val files: List<File> = if (!rootMode) {
+            path.toFile().listFiles()?.toList()!!
+        } else {
+            ProcessBuilder("su", "-c", "ls", "-1", path.pathString) // -1 每行一个文件
+                .redirectErrorStream(true)
+                .start()
+                .inputStream.bufferedReader()
+                .use { reader ->
+                    reader.readLines().map { name -> File(File(path.pathString), name) }
+                }
+        }
+
+        return files.sortedWith(
             compareBy<File> { !it.isDirectory }
                 .then(
                     when (sortOrder) {
@@ -132,11 +144,11 @@ fun accessFiles(path: Path, sortOrder: SortOrder): List<File> {
 
 fun getFileType(file: File): FileType {
     return if (file.isDirectory) FileType.FOLDER else when (file.extension.lowercase()) {
-        "txt" -> FileType.TEXT
+        "txt", "prop", "conf", "json" -> FileType.TEXT
         "jpg", "jpeg", "png", "gif", "webp" -> FileType.IMAGE
         "mp3", "wav", "ogg" -> FileType.AUDIO
         "mp4" -> FileType.VIDEO
-        "sh" -> FileType.SCRIPT
+        "sh", "rc" -> FileType.SCRIPT
         "ttf", "otf" -> FileType.FONT
         "apk" -> FileType.INSTALLABLE
         "xml" -> FileType.XML
@@ -203,11 +215,10 @@ fun deleteFolder(folder: File): Flow<FileChangeProgress> = flow {
     val allFiles = folder.walkBottomUp().toList()
     val totalCount = allFiles.size
     if (totalCount == 0) {
-        emit(FileChangeProgress.Completed(0, true))
+        emit(FileChangeProgress.Completed( true))
         return@flow
     }
 
-    var successCount = 0
     var failedCount = 0
 
     allFiles.forEachIndexed { index, file ->
@@ -222,16 +233,12 @@ fun deleteFolder(folder: File): Flow<FileChangeProgress> = flow {
                 file.delete()
             }
 
-            when {
-                isDeleted -> successCount++
-                else -> failedCount++
-            }
+            if (!isDeleted) failedCount++
 
             emit(FileChangeProgress.InProgress(
                 current = index + 1,
                 total = totalCount,
                 percentage = ((index + 1) * 100 / totalCount).coerceAtMost(100),
-                successCount = successCount,
                 failedCount = failedCount
             ))
         } catch (e: Exception) {
@@ -240,7 +247,7 @@ fun deleteFolder(folder: File): Flow<FileChangeProgress> = flow {
         }
     }
     // 最终结果
-    emit(FileChangeProgress.Completed(successCount, failedCount == 0))
+    emit(FileChangeProgress.Completed(failedCount == 0))
 }.flowOn(Dispatchers.IO) // 在IO线程执行
 
 fun copyFolder(sourceFolder: File, targetFolder: File): Flow<FileChangeProgress> = flow {
@@ -252,11 +259,10 @@ fun copyFolder(sourceFolder: File, targetFolder: File): Flow<FileChangeProgress>
     val allFiles = sourceFolder.walkTopDown().toList()
     val totalCount = allFiles.size
     if (totalCount == 0) {
-        emit(FileChangeProgress.Completed(0, true))
+        emit(FileChangeProgress.Completed(true))
         return@flow
     }
 
-    var successCount = 0
     var failedCount = 0
 
     allFiles.forEachIndexed { index, sourceFile ->
@@ -267,24 +273,18 @@ fun copyFolder(sourceFolder: File, targetFolder: File): Flow<FileChangeProgress>
             var isCopied: Boolean
 
             if (sourceFile.isDirectory) {
-                // Create directory if it doesn't exist
                 targetFile.mkdirs()
                 isCopied = true
             } else {
-                // Copy file
                 isCopied = sourceFile.copyTo(targetFile, overwrite = false).exists()
             }
 
-            when {
-                isCopied -> successCount++
-                else -> failedCount++
-            }
+            if (!isCopied) failedCount++
 
             emit(FileChangeProgress.InProgress(
                 current = index + 1,
                 total = totalCount,
                 percentage = ((index + 1) * 100 / totalCount).coerceAtMost(100),
-                successCount = successCount,
                 failedCount = failedCount
             ))
         } catch (e: Exception) {
@@ -293,7 +293,7 @@ fun copyFolder(sourceFolder: File, targetFolder: File): Flow<FileChangeProgress>
         }
     }
     // Final result
-    emit(FileChangeProgress.Completed(successCount, failedCount == 0))
+    emit(FileChangeProgress.Completed( failedCount == 0))
 }.flowOn(Dispatchers.IO)
 
 sealed class FileChangeProgress {
@@ -301,12 +301,10 @@ sealed class FileChangeProgress {
         val current: Int,
         val total: Int,
         val percentage: Int,
-        val successCount: Int,
         val failedCount: Int,
     ) : FileChangeProgress()
 
     data class Completed(
-        val successCount: Int,
         val isAllSuccess: Boolean
     ) : FileChangeProgress()
 
@@ -379,4 +377,32 @@ fun install(context: Context, file: File) {
     }
 }
 
-fun Path.isRootPath(): Boolean = pathString == "/storage/emulated/0"
+/**
+ * 使用 root 权限读取文件（通过 su 命令）
+ */
+fun readFileWithRoot(filePath: String): String {
+    return try {
+        // 执行 su 命令读取文件（适用于 Android 设备）
+        val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat '$filePath'"))
+        val inputStream = process.inputStream
+
+        val content = inputStream.bufferedReader().use { it.readText() }
+        process.waitFor()
+        content
+    } catch (e: Exception) {
+        "访问出错: ${e.message}"
+    }
+}
+
+fun isAXMLFile(file: File): Boolean {
+    FileInputStream(file).use { fis ->
+        val expectedHeader = byteArrayOf(0x03, 0x00, 0x08, 0x00)
+        val actualHeader = ByteArray(4)
+        fis.read(actualHeader)
+        return actualHeader.contentEquals(expectedHeader)
+    }
+}
+
+fun Path.isRootPath(): Boolean {
+    return if (!rootMode) pathString == "/storage/emulated/0" else pathString == "/"
+}

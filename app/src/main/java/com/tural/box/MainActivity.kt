@@ -8,8 +8,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.tural.box.ui.TuralApp
+import com.tural.box.ui.rootMode
 import com.tural.box.ui.theme.TuralBoxTheme
-import net.sf.sevenzipjbinding.SevenZip
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,5 +27,14 @@ class MainActivity : ComponentActivity() {
             startActivity(intent)
             return
         }
+
+        rootMode =
+            try {
+                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "echo 0"))
+                val exitCode = process.waitFor()
+                exitCode == 0
+            } catch (_: Exception) {
+                false
+            }
     }
 }

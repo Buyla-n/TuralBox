@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.BottomAppBar
@@ -238,7 +239,7 @@ fun TuralApp(
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.fillMaxWidth(0.8f),
-                drawerShape = MaterialTheme.shapes.extraLarge
+                drawerShape = MaterialTheme.shapes.extraLarge.copy(topStart = CornerSize(0.dp), bottomStart = CornerSize(0.dp))
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 16.dp)
@@ -788,7 +789,10 @@ fun TuralApp(
                                     ToolItem(
                                         text = "属性",
                                         icon = R.drawable.outline_info_24,
-                                        onClick = { /* 属性操作 */ }
+                                        onClick = {
+                                            dialogManager.showProperties = true
+                                            cancel()
+                                        }
                                     )
 
                                     ToolItem(
@@ -796,7 +800,6 @@ fun TuralApp(
                                         icon = R.drawable.outline_share_24,
                                         onClick = {
                                             context.shareFile(currentFile!!)
-                                            cancel()
                                         },
                                         enabled = !currentFile!!.isDirectory
                                     )
@@ -1727,11 +1730,7 @@ fun TuralApp(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
 
-                                    Image(
-                                        painter = painterResource(R.drawable.ic_launcher_static),
-                                        contentDescription = "App icon",
-                                        modifier = Modifier.size(48.dp)
-                                    )
+                                    AppIcon()
 
                                     Spacer(modifier = Modifier.width(16.dp))
 
@@ -1745,32 +1744,37 @@ fun TuralApp(
                                         )
                                         Spacer(Modifier.height(4.dp))
                                         Text(
-                                            text = "0.0.2 (SnapShot)",
+                                            text = "0.0.3 (SnapShot)",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
                                     }
                                 }
-                                LinkText(
-                                    "软件所用的",
-                                    {
-                                        val intent = Intent(context, OpenSourceActivity::class.java)
-                                        context.startActivity(intent)
-                                    },
-                                    "开源库",
-                                )
-                                LinkText(
-                                    "加入我们的",
-                                    {
-                                        val intent = Intent(
-                                            Intent.ACTION_VIEW,
-                                            context.getString(R.string.qq_group_link).toUri()
-                                        )
-                                        context.startActivity(intent)
-                                    },
-                                    "QQ 群聊",
-                                )
-
+                                Row(Modifier.fillMaxWidth()) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            val intent =
+                                                Intent(context, OpenSourceActivity::class.java)
+                                            context.startActivity(intent)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(" 开源库 ")
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    OutlinedButton(
+                                        onClick = {
+                                            val intent = Intent(
+                                                Intent.ACTION_VIEW,
+                                                context.getString(R.string.qq_group_link).toUri()
+                                            )
+                                            context.startActivity(intent)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("QQ 群聊")
+                                    }
+                                }
                             }
                         }
                     }
@@ -1972,39 +1976,11 @@ fun TuralApp(
                     }
                 )
             }
-        }
-    }
-}
+            if (dialogManager.showProperties) {
 
-@Composable
-fun LinkText(
-    start: String,
-    onClick: () -> Unit,
-    linkName: String
-) {
-    Text(
-        buildAnnotatedString {
-            append(start)
-
-            withLink(
-                LinkAnnotation.Clickable(
-                    tag = "1",
-                    styles = TextLinkStyles(
-                        SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    ),
-                    linkInteractionListener = {
-                        onClick()
-                    },
-                )
-
-            ) {
-                append(linkName)
             }
         }
-    )
+    }
 }
 
 data class PackageInfo(

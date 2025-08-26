@@ -18,4 +18,5 @@ class DialogManager {
     var showSearch by mutableStateOf(false)
     var showAbout by mutableStateOf(false)
     var showAudio by mutableStateOf(false)
+    var showProperties by mutableStateOf(false)
 }

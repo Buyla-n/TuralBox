@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+
 android {
     namespace = "com.tural.box"
     compileSdk = 36
@@ -14,8 +15,8 @@ android {
         applicationId = "com.tural.box"
         minSdk = 31
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.0.2"
+        versionCode = 3
+        versionName = "0.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -69,6 +70,5 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.image.viewer)
     implementation(libs.androidx.media3.exoplayer)
-    implementation("net.sf.sevenzipjbinding:sevenzipjbinding:16.02-2.01")
-    implementation("net.sf.sevenzipjbinding:sevenzipjbinding-linux-arm64:16.02-2.01")
+    implementation(libs.material3)
 }
