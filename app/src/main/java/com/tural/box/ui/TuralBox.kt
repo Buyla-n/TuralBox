@@ -44,6 +44,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.BottomAppBar
@@ -1276,7 +1277,7 @@ fun TuralApp(
                 )
             }
             if (dialogManager.showPath) {
-                var path by remember { mutableStateOf(currentPath.pathString) }
+                val textFieldState = rememberTextFieldState(initialText = currentPath.pathString)
                 AlertDialog(
                     onDismissRequest = { dialogManager.showPath = false },
                     title = { Text("路径 ${if (currentPanel == PanelPosition.LEFT) "左" else "右"}") },
@@ -1284,10 +1285,8 @@ fun TuralApp(
                         val focusRequester = remember { FocusRequester() }
 
                         TextField(
-                            value = path,
-                            onValueChange = { path = it },
+                            state = textFieldState,
                             shape = MaterialTheme.shapes.small,
-                            singleLine = true,
                             modifier = Modifier.focusRequester(focusRequester)
                         )
 
@@ -1298,7 +1297,7 @@ fun TuralApp(
                     confirmButton = {
                         Button(
                             onClick = {
-                                currentPanelState().path = Path(path)
+                                currentPanelState().path = Path(textFieldState.text.toString())
                                 dialogManager.showPath = false
                             }
                         ) {
@@ -1315,25 +1314,23 @@ fun TuralApp(
                 )
             }
             if (dialogManager.showRename) {
-                var fileName by remember { mutableStateOf(currentFile!!.name) }
+                //var fileName by remember { mutableStateOf(currentFile!!.name) }
+                val textFieldState = rememberTextFieldState(initialText = currentFile!!.name)
                 var renameFail by remember { mutableStateOf(false) }
                 AlertDialog(
                     onDismissRequest = { dialogManager.showRename = false },
                     title = { Text("重命名") },
                     text = {
-                        val hasInvalidChar = remember(fileName) {
-                            fileName.any { it in invalidChars }
+                        val currentText = textFieldState.text
+                        val hasInvalidChar = remember(currentText) {
+                            currentText.any { it in invalidChars }
                         }
-                        val isEmpty = fileName.isBlank()
+                        val isEmpty = currentText.isBlank()
                         val isValid = !hasInvalidChar && !isEmpty && !renameFail
                         val focusRequester = remember { FocusRequester() }
 
                         TextField(
-                            value = fileName,
-                            onValueChange = {
-                                fileName = it
-                                renameFail = false
-                            },
+                            state = textFieldState,
                             shape = MaterialTheme.shapes.small,
                             isError = !isValid,
                             supportingText = {
@@ -1354,7 +1351,6 @@ fun TuralApp(
                                     )
                                 }
                             },
-                            singleLine = true,
                             modifier = Modifier.focusRequester(focusRequester)
                         )
 
@@ -1367,7 +1363,7 @@ fun TuralApp(
                             onClick = {
                                 val renamer = renameFile(
                                     currentFile!!,
-                                    File("${currentFile!!.parent}/$fileName")
+                                    File("${currentFile!!.parent}/${textFieldState.text}")
                                 )
                                 if (!renamer) renameFail = true else {
                                     dialogManager.showRename = false
