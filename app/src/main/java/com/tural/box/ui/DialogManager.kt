@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 class DialogManager {
+    //convenient
     var showTool by mutableStateOf(false)
     var showSort by mutableStateOf(false)
     var showAppDetail by mutableStateOf(false)

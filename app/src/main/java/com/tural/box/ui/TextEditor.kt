@@ -67,24 +67,17 @@ fun TextEditor(
         }
     }
 
-
-    fun readFile(): String {
-        return if (!rootMode) {
-            file.readText()
-        } else readFileWithRoot(file.path)
-    }
-
     LaunchedEffect(filePath) {
         scope.launch(Dispatchers.IO) {
             state.setTextAndPlaceCursorAtEnd(
                 if (file.exists()) {
                     if (file.extension != "xml") {
-                        readFile()
+                        file.readText()
                     } else {
                         if (isAXMLFile(file)) {
                             AXMLPrinter.print(file.path)
                         } else {
-                            readFile()
+                            file.readText()
                         }
                     }
                 } else {

@@ -111,8 +111,8 @@ fun FontViewer(
                         TextStyle(fontFamily = fontFamily, fontSize = 24.sp),
                     )
 
-                    val sampleText = "Simple is better than complex.\n" +
-                            "简洁胜于复杂。"
+                    val sampleText = "A Community, Built by All.\n" +
+                            "世界上的每一个人，构成了世界。"
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),

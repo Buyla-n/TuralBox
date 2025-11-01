@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
 import android.view.MotionEvent
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -17,7 +18,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -99,14 +99,8 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
@@ -1285,7 +1279,7 @@ fun TuralApp(
                 var path by remember { mutableStateOf(currentPath.pathString) }
                 AlertDialog(
                     onDismissRequest = { dialogManager.showPath = false },
-                    title = { Text("排序 ${if (currentPanel == PanelPosition.LEFT) "左" else "右"}") },
+                    title = { Text("路径 ${if (currentPanel == PanelPosition.LEFT) "左" else "右"}") },
                     text = {
                         val focusRequester = remember { FocusRequester() }
 
@@ -1484,7 +1478,7 @@ fun TuralApp(
                                                 finded.add(path.toFile())
                                             }
                                         } catch (_: Exception) {
-                                            // 忽略单个文件的错误
+
                                         }
                                     }
                                 }
@@ -1753,8 +1747,7 @@ fun TuralApp(
                                 Row(Modifier.fillMaxWidth()) {
                                     OutlinedButton(
                                         onClick = {
-                                            val intent =
-                                                Intent(context, OpenSourceActivity::class.java)
+                                            val intent = Intent(context, OpenSourceActivity::class.java)
                                             context.startActivity(intent)
                                         },
                                         modifier = Modifier.weight(1f)
@@ -1764,11 +1757,7 @@ fun TuralApp(
                                     Spacer(Modifier.width(8.dp))
                                     OutlinedButton(
                                         onClick = {
-                                            val intent = Intent(
-                                                Intent.ACTION_VIEW,
-                                                context.getString(R.string.qq_group_link).toUri()
-                                            )
-                                            context.startActivity(intent)
+                                            Toast.makeText(context, "没建", Toast.LENGTH_SHORT).show()
                                         },
                                         modifier = Modifier.weight(1f)
                                     ) {

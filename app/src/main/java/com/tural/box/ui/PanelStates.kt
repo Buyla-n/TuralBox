@@ -12,7 +12,6 @@ class PanelStates {
 
     var files by mutableStateOf(emptyList<File>())
     var sortOrder by mutableStateOf(SortOrder.NAME)
-
     var isInZip: Boolean = false
     var previousPath = Path(RootPath)
     var zipFile: File? = null

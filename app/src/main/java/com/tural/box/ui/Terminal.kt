@@ -48,11 +48,12 @@ import com.tural.box.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 @SuppressLint("CoroutineCreationDuringComposition", "SdCardPath")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Terminal() {
+fun Terminal(filePath: String) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberLazyListState()
@@ -136,6 +137,11 @@ fun Terminal() {
         contentWindowInsets = WindowInsets(0,0,0,0)
     ) { innerPadding ->
         val focusRequester = remember { FocusRequester() }
+
+        if (filePath.isNotEmpty()) {
+            executeCommand(filePath)
+        }
+
         Column(
             modifier = Modifier
                 .padding(innerPadding)

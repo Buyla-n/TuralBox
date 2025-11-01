@@ -8,14 +8,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.tural.box.ui.TuralApp
-import com.tural.box.ui.rootMode
 import com.tural.box.ui.theme.TuralBoxTheme
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.isNavigationBarContrastEnforced = false
+
         setContent {
             TuralBoxTheme {
                 TuralApp(context = this)
@@ -28,13 +29,5 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        rootMode =
-            try {
-                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "echo 0"))
-                val exitCode = process.waitFor()
-                exitCode == 0
-            } catch (_: Exception) {
-                false
-            }
     }
 }

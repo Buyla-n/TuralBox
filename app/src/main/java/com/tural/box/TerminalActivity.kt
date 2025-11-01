@@ -1,6 +1,7 @@
 package com.tural.box
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,9 +13,12 @@ class TerminalActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.isNavigationBarContrastEnforced = false
+
+        val filePath = intent.getStringExtra("filePath") ?: ""
+
         setContent {
             TuralBoxTheme {
-                Terminal()
+                Terminal(filePath)
             }
         }
     }

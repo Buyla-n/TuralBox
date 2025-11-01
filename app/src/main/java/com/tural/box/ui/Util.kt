@@ -24,7 +24,6 @@ import kotlin.io.path.pathString
 
 const val RootPath = "/storage/emulated/0"
 const val ExtractPath = "/storage/emulated/0/TuralBox/Extract"
-var rootMode = false
 val invalidChars = listOf('/', '\\', ':', '*', '?', '"', '<', '>', '|')
 
 fun getFileIcon(type: FileType) : Int {
@@ -45,17 +44,7 @@ fun getFileIcon(type: FileType) : Int {
 
 fun accessFiles(path: Path, sortOrder: SortOrder): List<File> {
     try {
-        val files: List<File> = if (!rootMode) {
-            path.toFile().listFiles()?.toList()!!
-        } else {
-            ProcessBuilder("su", "-c", "ls", "-1", path.pathString) // -1 每行一个文件
-                .redirectErrorStream(true)
-                .start()
-                .inputStream.bufferedReader()
-                .use { reader ->
-                    reader.readLines().map { name -> File(File(path.pathString), name) }
-                }
-        }
+        val files = path.toFile().listFiles()?.toList()!!
 
         return files.sortedWith(
             compareBy<File> { !it.isDirectory }
@@ -73,74 +62,6 @@ fun accessFiles(path: Path, sortOrder: SortOrder): List<File> {
         return emptyList()
     }
 }
-
-//fun accessArchiveEntry(zipFile: File, path: Path, sortOrder: SortOrder): List<File> {
-//    try {
-//        SevenZip.initSevenZipFromPlatformJAR()
-//        val innerPath = parseZipPath(path.pathString)
-//        val archiveEntries = mutableListOf<File>()
-//
-//        RandomAccessFile(zipFile.path, "r").use { raf ->
-//            SevenZip.openInArchive(null, RandomAccessFileInStream(raf)).use { inArchive ->
-//                for (i in 0 until inArchive.numberOfItems) {
-//                    archiveEntries.add(createVirtualFile(i, zipFile, inArchive, "$innerPath/"))
-//                }
-//            }
-//        }
-//
-////        ZipFile(zipFile).use { zip ->
-////            val entries: Enumeration<ZipArchiveEntry> = zip.entries
-////
-////            while (entries.hasMoreElements()) {
-////                val entry = entries.nextElement()
-////                val name = entry.name.removePrefix(innerPath + "/")
-////                val name2 = if (!entry.isDirectory) name + "/" else name
-////
-////                archiveEntries.add(createVirtualFile(zipFile, entry, "$innerPath/"))
-////            }
-////        }
-//
-//
-//        return archiveEntries.sortedWith(
-//            compareBy<File> { !it.isDirectory }
-//                .then(
-//                    when (sortOrder) {
-//                        SortOrder.NAME -> compareBy { it.name.lowercase() }
-//                        SortOrder.TYPE -> compareBy { it.extension.lowercase() }
-//                        SortOrder.SIZE -> compareBy { it.length() }
-//                        SortOrder.TIME -> compareByDescending { it.lastModified() }
-//                    }
-//                )
-//        )
-//    } catch (e: Exception) {
-//        e.printStackTrace()
-//        return emptyList()
-//    }
-//}
-//
-//private fun createVirtualFile(i: Int, zipFile: File, entry: IInArchive, innerPath: String): File {
-//    val name = entry.getProperty(i, PropID.NAME) as String
-//    return object : File("${zipFile.path}${separator}${name}") {
-//        override fun exists(): Boolean = true
-//        override fun isDirectory(): Boolean = entry.getProperty(i, PropID.IS_FOLDER) as Boolean
-//        override fun isFile(): Boolean = !(entry.getProperty(i, PropID.IS_FOLDER) as Boolean)
-//        override fun length(): Long = entry.getProperty(i, PropID.SIZE) as Long
-//        override fun getName(): String = name.removePrefix(innerPath).removeSuffix("/")
-//        override fun getPath(): String = zipFile.path + "/" + name
-//
-//        override fun toString(): String {
-//            return "ZipEntryFile[name=${getName()}, path=${zipFile.path + "/" + name}, " +
-//                    "size=${length()}, isDir=$isDirectory]"
-//        }
-//    }
-//}
-//
-//fun parseZipPath(zipPath: String): String {
-//    val zipFileEndIndex = zipPath.indexOf(".zip") + 4
-//    val innerPath = zipPath.substring(zipFileEndIndex).removePrefix("/")
-//    return innerPath
-//}
-
 
 fun getFileType(file: File): FileType {
     return if (file.isDirectory) FileType.FOLDER else when (file.extension.lowercase()) {
@@ -246,9 +167,8 @@ fun deleteFolder(folder: File): Flow<FileChangeProgress> = flow {
             emit(FileChangeProgress.Error(e, file))
         }
     }
-    // 最终结果
     emit(FileChangeProgress.Completed(failedCount == 0))
-}.flowOn(Dispatchers.IO) // 在IO线程执行
+}.flowOn(Dispatchers.IO)
 
 fun copyFolder(sourceFolder: File, targetFolder: File): Flow<FileChangeProgress> = flow {
     require(sourceFolder.isDirectory) { "Source path must be a directory" }
@@ -377,23 +297,6 @@ fun install(context: Context, file: File) {
     }
 }
 
-/**
- * 使用 root 权限读取文件（通过 su 命令）
- */
-fun readFileWithRoot(filePath: String): String {
-    return try {
-        // 执行 su 命令读取文件（适用于 Android 设备）
-        val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat '$filePath'"))
-        val inputStream = process.inputStream
-
-        val content = inputStream.bufferedReader().use { it.readText() }
-        process.waitFor()
-        content
-    } catch (e: Exception) {
-        "访问出错: ${e.message}"
-    }
-}
-
 fun isAXMLFile(file: File): Boolean {
     FileInputStream(file).use { fis ->
         val expectedHeader = byteArrayOf(0x03, 0x00, 0x08, 0x00)
@@ -404,5 +307,5 @@ fun isAXMLFile(file: File): Boolean {
 }
 
 fun Path.isRootPath(): Boolean {
-    return if (!rootMode) pathString == "/storage/emulated/0" else pathString == "/"
+    return pathString == "/storage/emulated/0"
 }
