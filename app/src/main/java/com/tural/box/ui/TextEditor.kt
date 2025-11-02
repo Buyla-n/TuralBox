@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tural.box.R
 import com.tural.box.decoder.axml.AXMLPrinter
+import com.tural.box.util.isAXMLFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File

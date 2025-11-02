@@ -99,6 +99,11 @@ fun OpenSourceScreen(onBackPressed: () -> Unit) {
             name = "Media3 UI",
             license = "Apache 2.0",
             website = "https://github.com/androidx/media"
+        ),
+        Library(
+            name = "Apache Commons Compress",
+            license = "Apache 2.0",
+            website = "https://github.com/apache/commons-compress"
         )
     )
 

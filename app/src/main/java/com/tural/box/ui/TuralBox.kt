@@ -86,7 +86,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -105,7 +104,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
@@ -119,6 +117,28 @@ import com.tural.box.SettingsActivity
 import com.tural.box.TerminalActivity
 import com.tural.box.TextEditorActivity
 import com.tural.box.VideoActivity
+import com.tural.box.util.FileChangeProgress
+import com.tural.box.util.RootPath
+import com.tural.box.util.accessFiles
+import com.tural.box.util.buildZipTree
+import com.tural.box.util.copyFile
+import com.tural.box.util.copyFolder
+import com.tural.box.util.createFile
+import com.tural.box.util.createFolder
+import com.tural.box.util.deleteFile
+import com.tural.box.util.deleteFolder
+import com.tural.box.util.findNode
+import com.tural.box.util.formatFileDate
+import com.tural.box.util.formatFileSize
+import com.tural.box.util.getCompressFiles
+import com.tural.box.util.getFileSize
+import com.tural.box.util.getFileType
+import com.tural.box.util.install
+import com.tural.box.util.invalidChars
+import com.tural.box.util.isRootPath
+import com.tural.box.util.moveFile
+import com.tural.box.util.renameFile
+import com.tural.box.util.shareFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
@@ -153,6 +173,9 @@ fun TuralApp(
     val dialogManager = remember { DialogManager() }
     val leftPanelState = remember { PanelStates() }
     val rightPanelState = remember { PanelStates() }
+
+//    val target = getCompressFiles("/sdcard/TuralBox.apk", "/")
+//    target?.forEach { println(it.name) }
 
     fun currentPanelState(): PanelStates {
         return if (currentPanel == PanelPosition.LEFT) {
@@ -530,11 +553,11 @@ fun TuralApp(
                         cps.path = cps.path.parent
                     }
                     scope.launch(Dispatchers.IO) {
-                        //if (!cps.isInZip) {
+                        if (!cps.isInZip) {
                             cps.files = accessFiles(cps.path, cps.sortOrder)
-//                        } else {
-//                            cps.files = accessArchiveEntry(cps.zipFile!!, cps.path, cps.sortOrder)
-//                        }
+                        } else {
+                            //cps.files = findNode(buildZipTree(cps.zipFile!!.absolutePath), "/")
+                        }
                     }.join()
 
                     scope.launch(Dispatchers.Main) {
@@ -828,55 +851,49 @@ fun TuralApp(
                                     "删除失败",
                                     color = MaterialTheme.colorScheme.error
                                 )
-
                                 LoadingType.NONE -> Text(
                                     "文件将永久丢失",
                                     color = MaterialTheme.colorScheme.error
                                 )
-
                                 LoadingType.FILE -> LinearProgressIndicator(modifier = Modifier)
+                                LoadingType.DIRECTORY -> {
+                                    when (val current = progress) {
+                                        is FileChangeProgress.InProgress -> {
+
+                                            LinearProgressIndicator(
+                                                progress = { current.percentage / 100f },
+                                                modifier = Modifier
+                                            )
+
+                                            Spacer(Modifier.height(8.dp))
+                                            Text("进度: ${current.percentage}%")
+                                            Text("已处理: ${current.current}/${current.total}")
+                                            if (current.failedCount > 0) {
+                                                loadingType = LoadingType.PART_FAIL
+                                                Text("失败: ${current.failedCount}", color = Color.Red)
+                                            }
+                                        }
+
+                                        is FileChangeProgress.Error -> {
+                                            loadingType = LoadingType.FAIL
+                                        }
+
+                                        is FileChangeProgress.Completed -> {
+                                            if (current.isAllSuccess) {
+                                                dialogManager.showDelete = false
+                                                refresh()
+                                            } else {
+                                                Text(
+                                                    "部分删除失败",
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
+                                        null -> {}
+                                    }
+                                }
                                 else -> {}
                             }
-
-                            Spacer(Modifier.height(8.dp))
-
-                            when (val current = progress) {
-                                is FileChangeProgress.InProgress -> {
-
-                                    LinearProgressIndicator(
-                                        progress = { current.percentage / 100f },
-                                        modifier = Modifier
-                                    )
-
-                                    Spacer(Modifier.height(8.dp))
-                                    Text("进度: ${current.percentage}%")
-                                    Text("已处理: ${current.current}/${current.total}")
-                                    if (current.failedCount > 0) {
-                                        loadingType = LoadingType.PART_FAIL
-                                        Text("失败: ${current.failedCount}", color = Color.Red)
-                                    }
-                                }
-
-                                is FileChangeProgress.Error -> {
-                                    loadingType == LoadingType.FAIL
-                                }
-
-                                is FileChangeProgress.Completed -> {
-                                    if (current.isAllSuccess) {
-                                        dialogManager.showDelete = false
-                                        refresh()
-                                    } else {
-                                        Text(
-                                            "部分删除失败",
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                        println(loadingType)
-                                    }
-                                }
-
-                                null -> {}
-                            }
-
                         }
                     },
                     confirmButton = {
@@ -947,48 +964,46 @@ fun TuralApp(
                                 )
 
                                 LoadingType.FILE -> LinearProgressIndicator(modifier = Modifier)
+                                LoadingType.DIRECTORY -> {
+                                    when (val current = progress) {
+                                        is FileChangeProgress.InProgress -> {
+
+                                            LinearProgressIndicator(
+                                                progress = { current.percentage / 100f },
+                                                modifier = Modifier
+                                            )
+
+                                            Spacer(Modifier.height(8.dp))
+                                            Text("进度: ${current.percentage}%")
+                                            Text("已处理: ${current.current}/${current.total}")
+                                            if (current.failedCount > 0) {
+                                                loadingType = LoadingType.PART_FAIL
+                                                Text("失败: ${current.failedCount}", color = Color.Red)
+                                            }
+                                        }
+
+                                        is FileChangeProgress.Error -> {
+                                            loadingType == LoadingType.FAIL
+                                        }
+
+                                        is FileChangeProgress.Completed -> {
+                                            if (current.isAllSuccess) {
+                                                dialogManager.showCopy = false
+                                                negativeRefresh()
+                                            } else {
+                                                Text(
+                                                    "部分复制失败",
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                                println(loadingType)
+                                            }
+                                        }
+
+                                        null -> {}
+                                    }
+                                }
                                 else -> {}
                             }
-
-                            Spacer(Modifier.height(8.dp))
-
-                            when (val current = progress) {
-                                is FileChangeProgress.InProgress -> {
-
-                                    LinearProgressIndicator(
-                                        progress = { current.percentage / 100f },
-                                        modifier = Modifier
-                                    )
-
-                                    Spacer(Modifier.height(8.dp))
-                                    Text("进度: ${current.percentage}%")
-                                    Text("已处理: ${current.current}/${current.total}")
-                                    if (current.failedCount > 0) {
-                                        loadingType = LoadingType.PART_FAIL
-                                        Text("失败: ${current.failedCount}", color = Color.Red)
-                                    }
-                                }
-
-                                is FileChangeProgress.Error -> {
-                                    loadingType == LoadingType.FAIL
-                                }
-
-                                is FileChangeProgress.Completed -> {
-                                    if (current.isAllSuccess) {
-                                        dialogManager.showCopy = false
-                                        negativeRefresh()
-                                    } else {
-                                        Text(
-                                            "部分复制失败",
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                        println(loadingType)
-                                    }
-                                }
-
-                                null -> {}
-                            }
-
                         }
                     },
                     confirmButton = {
@@ -998,7 +1013,10 @@ fun TuralApp(
                                     scope.launch(Dispatchers.IO) {
                                         if (currentFile!!.isDirectory) {
                                             loadingType = LoadingType.DIRECTORY
-                                            copyFolder(currentFile!!, File("$negativePath/${currentFile!!.name}"))
+                                            copyFolder(
+                                                currentFile!!,
+                                                File("$negativePath/${currentFile!!.name}")
+                                            )
                                                 .catch { e ->
                                                     loadingType = LoadingType.FAIL
                                                     progress = FileChangeProgress.Error(
@@ -1011,7 +1029,10 @@ fun TuralApp(
                                                 }
                                         } else {
                                             loadingType = LoadingType.FILE
-                                            val result = copyFile(currentFile!!, File("$negativePath/${currentFile!!.name}"))
+                                            val result = copyFile(
+                                                currentFile!!,
+                                                File("$negativePath/${currentFile!!.name}")
+                                            )
                                             if (result) {
                                                 dialogManager.showCopy = false
                                                 negativeRefresh()
@@ -1059,49 +1080,47 @@ fun TuralApp(
                                 )
 
                                 LoadingType.FILE -> LinearProgressIndicator(modifier = Modifier)
+                                LoadingType.DIRECTORY -> {
+                                    when (val current = progress) {
+                                        is FileChangeProgress.InProgress -> {
+
+                                            LinearProgressIndicator(
+                                                progress = { current.percentage / 100f },
+                                                modifier = Modifier
+                                            )
+
+                                            Spacer(Modifier.height(8.dp))
+                                            Text("进度: ${current.percentage}%")
+                                            Text("已处理: ${current.current}/${current.total}")
+                                            if (current.failedCount > 0) {
+                                                loadingType = LoadingType.PART_FAIL
+                                                Text("失败: ${current.failedCount}", color = Color.Red)
+                                            }
+                                        }
+
+                                        is FileChangeProgress.Error -> {
+                                            loadingType == LoadingType.FAIL
+                                        }
+
+                                        is FileChangeProgress.Completed -> {
+                                            if (current.isAllSuccess) {
+                                                dialogManager.showMove = false
+                                                negativeRefresh()
+                                                refresh()
+                                            } else {
+                                                Text(
+                                                    "部分移动失败",
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                                println(loadingType)
+                                            }
+                                        }
+
+                                        null -> {}
+                                    }
+                                }
                                 else -> {}
                             }
-
-                            Spacer(Modifier.height(8.dp))
-
-                            when (val current = progress) {
-                                is FileChangeProgress.InProgress -> {
-
-                                    LinearProgressIndicator(
-                                        progress = { current.percentage / 100f },
-                                        modifier = Modifier
-                                    )
-
-                                    Spacer(Modifier.height(8.dp))
-                                    Text("进度: ${current.percentage}%")
-                                    Text("已处理: ${current.current}/${current.total}")
-                                    if (current.failedCount > 0) {
-                                        loadingType = LoadingType.PART_FAIL
-                                        Text("失败: ${current.failedCount}", color = Color.Red)
-                                    }
-                                }
-
-                                is FileChangeProgress.Error -> {
-                                    loadingType == LoadingType.FAIL
-                                }
-
-                                is FileChangeProgress.Completed -> {
-                                    if (current.isAllSuccess) {
-                                        dialogManager.showMove = false
-                                        negativeRefresh()
-                                        refresh()
-                                    } else {
-                                        Text(
-                                            "部分移动失败",
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                        println(loadingType)
-                                    }
-                                }
-
-                                null -> {}
-                            }
-
                         }
                     },
                     confirmButton = {
@@ -1392,7 +1411,7 @@ fun TuralApp(
             }
             if (dialogManager.showSearch) {
                 var searchFileName by remember { mutableStateOf("") }
-                val finded = remember { mutableStateListOf<File>() }
+                val found = remember { mutableStateListOf<File>() }
                 var searchProgress by remember { mutableFloatStateOf(0f) }
                 var processedFiles by remember { mutableIntStateOf(0) }
                 var isSearching by remember { mutableStateOf(false) }
@@ -1401,7 +1420,7 @@ fun TuralApp(
                 LaunchedEffect(isSearching) {
                     withContext(Dispatchers.IO) {
                         if (isSearching) {
-                            finded.clear()
+                            found.clear()
                             val searchPath = currentPath
                             var totalFiles = 0L
 
@@ -1454,7 +1473,7 @@ fun TuralApp(
                                             }
 
                                             if (file.fileName.toString().contains(searchFileName, true)) {
-                                                finded.add(file.toFile())
+                                                found.add(file.toFile())
                                             }
                                         } catch (_: Exception) {
                                             // 忽略单个文件的错误
@@ -1478,7 +1497,7 @@ fun TuralApp(
                                             }
 
                                             if (path.fileName.toString().contains(searchFileName, true)) {
-                                                finded.add(path.toFile())
+                                                found.add(path.toFile())
                                             }
                                         } catch (_: Exception) {
 
@@ -1531,13 +1550,13 @@ fun TuralApp(
                                 )
                             }
 
-                            if (finded.isNotEmpty()) {
+                            if (found.isNotEmpty()) {
                                 LazyColumn(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .heightIn(max = 400.dp)
                                 ) {
-                                    items(finded) { file ->
+                                    items(found) { file ->
                                         FileItem(
                                             file = file,
                                             type = getFileType(file),

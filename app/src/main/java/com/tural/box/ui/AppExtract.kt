@@ -73,6 +73,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.tural.box.R
+import com.tural.box.util.ExtractPath
+import com.tural.box.util.copyFile
+import com.tural.box.util.formatFileSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -346,7 +349,9 @@ fun AppExtract(){
                             Column {
                                 InfoItem("包名", app.packageName)
                                 InfoItem("版本号", app.longVersionCode.toString())
-                                InfoItem("大小", formatFileSize(File(app.applicationInfo!!.sourceDir).length()))
+                                InfoItem("大小",
+                                    formatFileSize(File(app.applicationInfo!!.sourceDir).length())
+                                )
                                 InfoItem("数据目录", app.applicationInfo!!.dataDir)
                                 InfoItem("安装目录", app.applicationInfo!!.sourceDir)
                                 InfoItem("UID", app.applicationInfo!!.uid.toString())
@@ -361,7 +366,7 @@ fun AppExtract(){
                                 }
                                 ExtractProcess.DONE -> {
                                     Spacer(Modifier.height(16.dp))
-                                    Text("提取完成, 文件被保存在 $ExtractPath", color = MaterialTheme.colorScheme.primary, modifier = Modifier.widthIn(max = 230.dp))
+                                    Text("提取完成, 文件被保存在 ${ExtractPath}", color = MaterialTheme.colorScheme.primary, modifier = Modifier.widthIn(max = 230.dp))
                                 }
                             }
                         }

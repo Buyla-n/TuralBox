@@ -75,4 +75,5 @@ dependencies {
     implementation(libs.image.viewer)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.material3)
+    implementation(libs.commons.compress)
 }
