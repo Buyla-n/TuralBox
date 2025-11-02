@@ -86,6 +86,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -100,6 +101,7 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -112,6 +114,7 @@ import com.tural.box.FontActivity
 import com.tural.box.ImageActivity
 import com.tural.box.OpenSourceActivity
 import com.tural.box.R
+import com.tural.box.SettingsActivity
 import com.tural.box.TerminalActivity
 import com.tural.box.TextEditorActivity
 import com.tural.box.VideoActivity
@@ -441,7 +444,9 @@ fun TuralApp(
                                             contentDescription = null
                                         )
                                     },
-                                    onClick = { /* Do something... */ }
+                                    onClick = {
+                                        context.startActivity(Intent(context, SettingsActivity::class.java))
+                                    }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("退出") },
@@ -1191,6 +1196,7 @@ fun TuralApp(
                                 val creator = createFile(currentPath, fileName)
                                 if (!creator) createFail = true else {
                                     dialogManager.showCreateFile = false
+                                    currentPanelState().highLightFiles = setOf(fileName)
                                     refresh()
                                 }
                             }
@@ -1202,6 +1208,7 @@ fun TuralApp(
                                 val creator = createFolder(currentPath, fileName)
                                 if (!creator) createFail = true else {
                                     dialogManager.showCreateFile = false
+                                    currentPanelState().highLightFiles = setOf(fileName)
                                     refresh()
                                 }
                             }
@@ -1388,7 +1395,7 @@ fun TuralApp(
                 var searchProgress by remember { mutableFloatStateOf(0f) }
                 var processedFiles by remember { mutableIntStateOf(0) }
                 var isSearching by remember { mutableStateOf(false) }
-                var includeSubdirectories by remember { mutableStateOf(true) } // 新增：搜索子目录开关
+                var includeSubdirectories by remember { mutableStateOf(true) }
 
                 LaunchedEffect(isSearching) {
                     withContext(Dispatchers.IO) {
@@ -1961,7 +1968,84 @@ fun TuralApp(
                 )
             }
             if (dialogManager.showProperties) {
+                val file = currentFile!!
+                AlertDialog(
+                    onDismissRequest = { dialogManager.showProperties = false },
+                    text = {
+                        val fileSize = remember(file) { getFileSize(file) }
+                        val formattedDate = remember(file) { formatFileDate(file) }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            @Composable
+                            fun PropertyRow(
+                                label: String,
+                                value: String
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = value,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            // 文件名
+                            PropertyRow(
+                                label = "文件名",
+                                value = file.name
+                            )
 
+                            // 目录
+                            PropertyRow(
+                                label = "目录",
+                                value = file.parent ?: "无"
+                            )
+
+                            // 类型（由你补充）
+                            PropertyRow(
+                                label = "类型",
+                                value = getFileType(file).name // 你需要实现这个函数
+                            )
+
+                            // 大小
+                            PropertyRow(
+                                label = "大小",
+                                value = fileSize
+                            )
+
+                            // 修改时间
+                            PropertyRow(
+                                label = "修改时间",
+                                value = formattedDate
+                            )
+
+                            // 文件路径（额外信息）
+                            PropertyRow(
+                                label = "路径",
+                                value = file.absolutePath
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = { dialogManager.showProperties = false }
+                        ) {
+                            Text("关闭")
+                        }
+                    }
+                )
             }
         }
     }

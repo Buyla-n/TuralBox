@@ -19,6 +19,9 @@ import java.io.IOException
 import java.net.URLConnection
 import java.nio.file.Files
 import java.nio.file.Path
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
@@ -86,6 +89,35 @@ fun formatFileSize(sizeInBytes: Long): String {
         else -> "%.1f GB".format(sizeInBytes / (1024.0 * 1024.0 * 1024.0))
     }
 }
+
+fun getFileSize(file: File): String {
+    return if (file.isDirectory) {
+        "文件夹"
+    } else {
+        formatSizeDetail(file.length())
+    }
+}
+
+fun formatSizeDetail(size: Long): String {
+    if (size <= 0) return "0 B"
+
+    val units = arrayOf("B", "KB", "MB", "GB", "TB")
+    val digitGroups = (Math.log10(size.toDouble()) / Math.log10(1024.0)).toInt()
+
+    return String.format(
+        "%.1f %s (%d 字节)",
+        size / Math.pow(1024.0, digitGroups.toDouble()),
+        units[digitGroups],
+        size
+    )
+}
+
+fun formatFileDate(file: File): String {
+    val date = Date(file.lastModified())
+    val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    return formatter.format(date)
+}
+
 
 fun createFile(directory: Path, fileName: String): Boolean {
     try {
