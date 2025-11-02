@@ -1314,7 +1314,6 @@ fun TuralApp(
                 )
             }
             if (dialogManager.showRename) {
-                //var fileName by remember { mutableStateOf(currentFile!!.name) }
                 val textFieldState = rememberTextFieldState(initialText = currentFile!!.name)
                 var renameFail by remember { mutableStateOf(false) }
                 AlertDialog(
