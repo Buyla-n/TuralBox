@@ -110,6 +110,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
 import com.tural.box.AppExtractActivity
+import com.tural.box.BuildConfig
 import com.tural.box.FontActivity
 import com.tural.box.ImageActivity
 import com.tural.box.OpenSourceActivity
@@ -254,7 +255,7 @@ fun TuralApp(
                         selected = false,
                         badge = {
                             Icon(
-                                painter = painterResource(R.drawable.outline_settings_24),
+                                painter = painterResource(R.drawable.outline_info_24),
                                 contentDescription = null
                             )
                         },
@@ -1740,7 +1741,7 @@ fun TuralApp(
                                         )
                                         Spacer(Modifier.height(4.dp))
                                         Text(
-                                            text = "0.0.3 (SnapShot)",
+                                            text = "${BuildConfig.versionName} (SnapShot)",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
