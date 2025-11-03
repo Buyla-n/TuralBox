@@ -1,8 +1,9 @@
-package com.tural.box.ui.screen.main
+package com.tural.box.dialog
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import java.io.File
 
 class DialogManager {
     //convenient
@@ -20,4 +21,6 @@ class DialogManager {
     var showAbout by mutableStateOf(false)
     var showAudio by mutableStateOf(false)
     var showProperties by mutableStateOf(false)
+
+    var currentFile: File? by mutableStateOf(null)
 }
