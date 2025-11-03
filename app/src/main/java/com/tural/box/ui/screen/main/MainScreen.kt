@@ -2,13 +2,9 @@ package com.tural.box.ui.screen.main
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
 import android.view.MotionEvent
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -20,13 +16,11 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -34,125 +28,66 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.pointer.pointerInteropFilter
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
-import coil.compose.AsyncImage
+import com.tural.box.R
 import com.tural.box.activity.AppListActivity
-import com.tural.box.BuildConfig
 import com.tural.box.activity.FontActivity
 import com.tural.box.activity.ImageActivity
-import com.tural.box.activity.LicensesActivity
-import com.tural.box.R
 import com.tural.box.activity.SettingsActivity
 import com.tural.box.activity.TerminalActivity
 import com.tural.box.activity.TextEditorActivity
 import com.tural.box.activity.VideoActivity
 import com.tural.box.dialog.DialogContainer
-import com.tural.box.model.FileType
-import com.tural.box.icons.AppIcon
 import com.tural.box.dialog.DialogManager
-import com.tural.box.util.FileChangeProgress
+import com.tural.box.model.FileType
+import com.tural.box.model.PanelPosition
 import com.tural.box.util.RootPath
 import com.tural.box.util.accessFiles
-import com.tural.box.util.copyFile
-import com.tural.box.util.copyFolder
-import com.tural.box.util.createFile
-import com.tural.box.util.createFolder
-import com.tural.box.util.deleteFile
-import com.tural.box.util.deleteFolder
-import com.tural.box.util.formatFileDate
-import com.tural.box.util.formatFileSize
-import com.tural.box.util.getFileSize
 import com.tural.box.util.getFileType
-import com.tural.box.util.install
-import com.tural.box.util.invalidChars
 import com.tural.box.util.isRootPath
-import com.tural.box.util.moveFile
 import com.tural.box.util.refresh
-import com.tural.box.util.renameFile
-import com.tural.box.util.shareFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.IOException
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
@@ -206,14 +141,50 @@ fun MainScreen(
             currentPanelState().path = file.toPath()
         } else {
             dialogManager.currentFile = file
-            when(type ?: getFileType(file)) {
-                FileType.TEXT -> context.startActivity(Intent(context, TextEditorActivity::class.java).putExtra("filePath", file.path))
-                FileType.IMAGE -> context.startActivity(Intent(context, ImageActivity::class.java).putExtra("filePath", file.path))
-                FileType.INSTALLABLE -> { dialogManager.showAppDetail = true }
-                FileType.XML -> context.startActivity(Intent(context, TextEditorActivity::class.java).putExtra("filePath", file.path))
-                FileType.FONT -> context.startActivity(Intent(context, FontActivity::class.java).putExtra("filePath", file.path))
-                FileType.VIDEO -> context.startActivity(Intent(context, VideoActivity::class.java).putExtra("filePath", file.path))
-                FileType.AUDIO -> { dialogManager.showAudio = true }
+            when (type ?: getFileType(file)) {
+                FileType.TEXT -> context.startActivity(
+                    Intent(
+                        context,
+                        TextEditorActivity::class.java
+                    ).putExtra("filePath", file.path)
+                )
+
+                FileType.IMAGE -> context.startActivity(
+                    Intent(
+                        context,
+                        ImageActivity::class.java
+                    ).putExtra("filePath", file.path)
+                )
+
+                FileType.INSTALLABLE -> {
+                    dialogManager.showAppDetail = true
+                }
+
+                FileType.XML -> context.startActivity(
+                    Intent(
+                        context,
+                        TextEditorActivity::class.java
+                    ).putExtra("filePath", file.path)
+                )
+
+                FileType.FONT -> context.startActivity(
+                    Intent(
+                        context,
+                        FontActivity::class.java
+                    ).putExtra("filePath", file.path)
+                )
+
+                FileType.VIDEO -> context.startActivity(
+                    Intent(
+                        context,
+                        VideoActivity::class.java
+                    ).putExtra("filePath", file.path)
+                )
+
+                FileType.AUDIO -> {
+                    dialogManager.showAudio = true
+                }
+
                 FileType.ARCHIVE -> {
                     val cps = currentPanelState()
                     cps.zipFile = file
@@ -221,7 +192,10 @@ fun MainScreen(
                     cps.isInZip = true
                     cps.path = Path("${file.path}")
                 }
-                else -> { dialogManager.showOpenMode = true }
+
+                else -> {
+                    dialogManager.showOpenMode = true
+                }
             }
         }
     }
@@ -244,7 +218,10 @@ fun MainScreen(
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.fillMaxWidth(0.8f),
-                drawerShape = MaterialTheme.shapes.extraLarge.copy(topStart = CornerSize(0.dp), bottomStart = CornerSize(0.dp))
+                drawerShape = MaterialTheme.shapes.extraLarge.copy(
+                    topStart = CornerSize(0.dp),
+                    bottomStart = CornerSize(0.dp)
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 16.dp)
@@ -271,7 +248,11 @@ fun MainScreen(
                     )
                     HorizontalDivider()
 
-                    Text("存储", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "存储",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.titleMedium
+                    )
                     NavigationDrawerItem(
                         label = {
                             var storageProgress by remember { mutableFloatStateOf(0f) }
@@ -279,7 +260,8 @@ fun MainScreen(
                             LaunchedEffect(Unit) {
                                 val progress = withContext(Dispatchers.IO) {
                                     try {
-                                        val stat = StatFs(Environment.getExternalStorageDirectory().path)
+                                        val stat =
+                                            StatFs(Environment.getExternalStorageDirectory().path)
                                         val totalBytes = stat.totalBytes
                                         val availableBytes = stat.availableBytes
                                         if (totalBytes > 0) (totalBytes - availableBytes).toFloat() / totalBytes else 0f
@@ -290,7 +272,10 @@ fun MainScreen(
                                 storageProgress = progress
                             }
                             Column {
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
                                     Text("内部存储")
                                     Text("${(storageProgress * 100).toInt()}%")
                                 }
@@ -320,11 +305,20 @@ fun MainScreen(
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                    Text("工具", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "工具",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.titleMedium
+                    )
                     NavigationDrawerItem(
                         label = { Text("软件提取") },
                         selected = false,
-                        icon = { Icon(painterResource(R.drawable.outline_unarchive_24), contentDescription = null) },
+                        icon = {
+                            Icon(
+                                painterResource(R.drawable.outline_unarchive_24),
+                                contentDescription = null
+                            )
+                        },
                         onClick = {
                             context.startActivity(Intent(context, AppListActivity::class.java))
                         }
@@ -332,7 +326,12 @@ fun MainScreen(
                     NavigationDrawerItem(
                         label = { Text("终端模拟") },
                         selected = false,
-                        icon = { Icon(painterResource(R.drawable.outline_terminal_24), contentDescription = null) },
+                        icon = {
+                            Icon(
+                                painterResource(R.drawable.outline_terminal_24),
+                                contentDescription = null
+                            )
+                        },
                         onClick = {
                             context.startActivity(Intent(context, TerminalActivity::class.java))
                         },
@@ -452,7 +451,12 @@ fun MainScreen(
                                         )
                                     },
                                     onClick = {
-                                        context.startActivity(Intent(context, SettingsActivity::class.java))
+                                        context.startActivity(
+                                            Intent(
+                                                context,
+                                                SettingsActivity::class.java
+                                            )
+                                        )
                                     }
                                 )
                                 DropdownMenuItem(
@@ -530,20 +534,23 @@ fun MainScreen(
                     .padding(contentPadding)
             ) {
 
-                LaunchedEffect(leftPanelState.path,Unit) {
+                LaunchedEffect(leftPanelState.path, Unit) {
                     if (leftPanelState.highLightFiles.any { leftPanelState.path.endsWith(it) }) {
                         leftPanelState.path = leftPanelState.path.parent
                     }
 
                     leftPanelState.files = withContext(Dispatchers.IO) {
-                         accessFiles(leftPanelState.path, leftPanelState.sortOrder)
+                        accessFiles(leftPanelState.path, leftPanelState.sortOrder)
                     }
 
                     scope.launch(Dispatchers.Main) {
                         if (leftPanelState.highLightFiles.isNotEmpty()) {
                             delay(50)
                             val index = leftPanelState.files.indexOfFirst { file ->
-                                file.name.equals(leftPanelState.highLightFiles.first(), ignoreCase = true)
+                                file.name.equals(
+                                    leftPanelState.highLightFiles.first(),
+                                    ignoreCase = true
+                                )
                             }
                             if (index != -1) {
                                 leftLazyState.scrollToItem(index)
@@ -552,7 +559,7 @@ fun MainScreen(
                     }
                 }
 
-                LaunchedEffect(rightPanelState.path,Unit) {
+                LaunchedEffect(rightPanelState.path, Unit) {
                     if (rightPanelState.highLightFiles.any { rightPanelState.path.endsWith(it) }) {
                         rightPanelState.path = rightPanelState.path.parent
                     }
@@ -565,7 +572,10 @@ fun MainScreen(
                         if (rightPanelState.highLightFiles.isNotEmpty()) {
                             delay(50)
                             val index = rightPanelState.files.indexOfFirst { file ->
-                                file.name.equals(rightPanelState.highLightFiles.first(), ignoreCase = true)
+                                file.name.equals(
+                                    rightPanelState.highLightFiles.first(),
+                                    ignoreCase = true
+                                )
                             }
                             if (index != -1) {
                                 rightLazyState.scrollToItem(index)
@@ -689,35 +699,4 @@ fun MainScreen(
             )
         }
     }
-}
-
-data class PackageInfo(
-    val name: String,
-    val packageName: String,
-    val versionName: String,
-    val versionCode: Long,
-    val uid: Int? = null,
-    val sourceDir: String,
-    val dataDir: String? = null,
-    val icon: Drawable
-)
-
-enum class PanelPosition {
-    LEFT,
-    RIGHT
-}
-
-enum class LoadingType {
-    NONE,
-    FILE,
-    DIRECTORY,
-    FAIL,
-    PART_FAIL
-}
-
-enum class SortOrder {
-    NAME,
-    SIZE,
-    TIME,
-    TYPE
 }

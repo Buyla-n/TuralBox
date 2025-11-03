@@ -75,14 +75,14 @@ import coil.compose.AsyncImage
 import com.tural.box.BuildConfig
 import com.tural.box.R
 import com.tural.box.activity.LicensesActivity
+import com.tural.box.data.PackageData
 import com.tural.box.icons.AppIcon
 import com.tural.box.model.FileType
+import com.tural.box.model.FileProcessType
+import com.tural.box.model.PanelPosition
+import com.tural.box.model.SortOrder
 import com.tural.box.ui.screen.main.FileRow
-import com.tural.box.ui.screen.main.LoadingType
-import com.tural.box.ui.screen.main.PackageInfo
-import com.tural.box.ui.screen.main.PanelPosition
 import com.tural.box.ui.screen.main.PanelStates
-import com.tural.box.ui.screen.main.SortOrder
 import com.tural.box.util.FileChangeProgress
 import com.tural.box.util.copyFile
 import com.tural.box.util.copyFolder
@@ -115,7 +115,6 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
-import kotlin.use
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -260,7 +259,7 @@ fun DialogContainer(
     }
     if (dialogManager.showDelete) {
         var progress by remember { mutableStateOf<FileChangeProgress?>(null) }
-        var loadingType by remember { mutableStateOf(LoadingType.NONE) }
+        var loadingType by remember { mutableStateOf(FileProcessType.NONE) }
         AlertDialog(
             modifier = Modifier.width(560.dp),
             onDismissRequest = { dialogManager.showDelete = false },
@@ -272,16 +271,16 @@ fun DialogContainer(
                     Spacer(Modifier.height(8.dp))
 
                     when (loadingType) {
-                        LoadingType.FAIL -> Text(
+                        FileProcessType.FAIL -> Text(
                             "删除失败",
                             color = MaterialTheme.colorScheme.error
                         )
-                        LoadingType.NONE -> Text(
+                        FileProcessType.NONE -> Text(
                             "文件将永久丢失",
                             color = MaterialTheme.colorScheme.error
                         )
-                        LoadingType.FILE -> LinearProgressIndicator(modifier = Modifier)
-                        LoadingType.DIRECTORY -> {
+                        FileProcessType.FILE -> LinearProgressIndicator(modifier = Modifier)
+                        FileProcessType.DIRECTORY -> {
                             when (val current = progress) {
                                 is FileChangeProgress.InProgress -> {
 
@@ -294,13 +293,13 @@ fun DialogContainer(
                                     Text("进度: ${current.percentage}%")
                                     Text("已处理: ${current.current}/${current.total}")
                                     if (current.failedCount > 0) {
-                                        loadingType = LoadingType.PART_FAIL
+                                        loadingType = FileProcessType.PART_FAIL
                                         Text("失败: ${current.failedCount}", color = Color.Red)
                                     }
                                 }
 
                                 is FileChangeProgress.Error -> {
-                                    loadingType = LoadingType.FAIL
+                                    loadingType = FileProcessType.FAIL
                                 }
 
                                 is FileChangeProgress.Completed -> {
@@ -327,10 +326,10 @@ fun DialogContainer(
                         if (currentFile != null) {
                             scope.launch(Dispatchers.IO) {
                                 if (currentFile!!.isDirectory) {
-                                    loadingType = LoadingType.DIRECTORY
+                                    loadingType = FileProcessType.DIRECTORY
                                     deleteFolder(currentFile!!)
                                         .catch { e ->
-                                            loadingType = LoadingType.FAIL
+                                            loadingType = FileProcessType.FAIL
                                             progress = FileChangeProgress.Error(
                                                 e as Exception,
                                                 currentFile!!
@@ -340,18 +339,18 @@ fun DialogContainer(
                                             progress = update
                                         }
                                 } else {
-                                    loadingType = LoadingType.FILE
+                                    loadingType = FileProcessType.FILE
                                     val result = deleteFile(currentFile!!)
                                     if (result) {
                                         dialogManager.showDelete = false
                                         refresh(scope, panelStates)
                                     } else {
-                                        loadingType = LoadingType.FAIL
+                                        loadingType = FileProcessType.FAIL
                                     }
                                 }
                             }
                         } else {
-                            loadingType = LoadingType.FAIL
+                            loadingType = FileProcessType.FAIL
                         }
                     }
                 ) {
@@ -371,7 +370,7 @@ fun DialogContainer(
     }
     if (dialogManager.showCopy) {
         var progress by remember { mutableStateOf<FileChangeProgress?>(null) }
-        var loadingType by remember { mutableStateOf(LoadingType.NONE) }
+        var loadingType by remember { mutableStateOf(FileProcessType.NONE) }
         AlertDialog(
             modifier = Modifier.width(560.dp),
             onDismissRequest = { dialogManager.showCopy = false },
@@ -383,13 +382,13 @@ fun DialogContainer(
                     Spacer(Modifier.height(8.dp))
 
                     when (loadingType) {
-                        LoadingType.FAIL -> Text(
+                        FileProcessType.FAIL -> Text(
                             "复制失败",
                             color = MaterialTheme.colorScheme.error
                         )
 
-                        LoadingType.FILE -> LinearProgressIndicator(modifier = Modifier)
-                        LoadingType.DIRECTORY -> {
+                        FileProcessType.FILE -> LinearProgressIndicator(modifier = Modifier)
+                        FileProcessType.DIRECTORY -> {
                             when (val current = progress) {
                                 is FileChangeProgress.InProgress -> {
 
@@ -402,13 +401,13 @@ fun DialogContainer(
                                     Text("进度: ${current.percentage}%")
                                     Text("已处理: ${current.current}/${current.total}")
                                     if (current.failedCount > 0) {
-                                        loadingType = LoadingType.PART_FAIL
+                                        loadingType = FileProcessType.PART_FAIL
                                         Text("失败: ${current.failedCount}", color = Color.Red)
                                     }
                                 }
 
                                 is FileChangeProgress.Error -> {
-                                    loadingType == LoadingType.FAIL
+                                    loadingType == FileProcessType.FAIL
                                 }
 
                                 is FileChangeProgress.Completed -> {
@@ -437,13 +436,13 @@ fun DialogContainer(
                         if (currentFile != null) {
                             scope.launch(Dispatchers.IO) {
                                 if (currentFile!!.isDirectory) {
-                                    loadingType = LoadingType.DIRECTORY
+                                    loadingType = FileProcessType.DIRECTORY
                                     copyFolder(
                                         currentFile!!,
                                         File("${negativePanelStates.path}/${currentFile!!.name}")
                                     )
                                         .catch { e ->
-                                            loadingType = LoadingType.FAIL
+                                            loadingType = FileProcessType.FAIL
                                             progress = FileChangeProgress.Error(
                                                 e as Exception,
                                                 currentFile!!
@@ -453,7 +452,7 @@ fun DialogContainer(
                                             progress = update
                                         }
                                 } else {
-                                    loadingType = LoadingType.FILE
+                                    loadingType = FileProcessType.FILE
                                     val result = copyFile(
                                         currentFile!!,
                                         File("${negativePanelStates.path}/${currentFile!!.name}")
@@ -462,12 +461,12 @@ fun DialogContainer(
                                         dialogManager.showCopy = false
                                         refresh(scope, negativePanelStates)
                                     } else {
-                                        loadingType = LoadingType.FAIL
+                                        loadingType = FileProcessType.FAIL
                                     }
                                 }
                             }
                         } else {
-                            loadingType = LoadingType.FAIL
+                            loadingType = FileProcessType.FAIL
                         }
                     }
                 ) {
@@ -487,7 +486,7 @@ fun DialogContainer(
     }
     if (dialogManager.showMove) {
         var progress by remember { mutableStateOf<FileChangeProgress?>(null) }
-        var loadingType by remember { mutableStateOf(LoadingType.NONE) }
+        var loadingType by remember { mutableStateOf(FileProcessType.NONE) }
         AlertDialog(
             modifier = Modifier.width(560.dp),
             onDismissRequest = { dialogManager.showMove = false },
@@ -499,13 +498,13 @@ fun DialogContainer(
                     Spacer(Modifier.height(8.dp))
 
                     when (loadingType) {
-                        LoadingType.FAIL -> Text(
+                        FileProcessType.FAIL -> Text(
                             "移动失败",
                             color = MaterialTheme.colorScheme.error
                         )
 
-                        LoadingType.FILE -> LinearProgressIndicator(modifier = Modifier)
-                        LoadingType.DIRECTORY -> {
+                        FileProcessType.FILE -> LinearProgressIndicator(modifier = Modifier)
+                        FileProcessType.DIRECTORY -> {
                             when (val current = progress) {
                                 is FileChangeProgress.InProgress -> {
 
@@ -518,13 +517,13 @@ fun DialogContainer(
                                     Text("进度: ${current.percentage}%")
                                     Text("已处理: ${current.current}/${current.total}")
                                     if (current.failedCount > 0) {
-                                        loadingType = LoadingType.PART_FAIL
+                                        loadingType = FileProcessType.PART_FAIL
                                         Text("失败: ${current.failedCount}", color = Color.Red)
                                     }
                                 }
 
                                 is FileChangeProgress.Error -> {
-                                    loadingType == LoadingType.FAIL
+                                    loadingType == FileProcessType.FAIL
                                 }
 
                                 is FileChangeProgress.Completed -> {
@@ -554,7 +553,7 @@ fun DialogContainer(
                         if (currentFile != null) {
                             scope.launch(Dispatchers.IO) {
 
-                                loadingType = LoadingType.FILE
+                                loadingType = FileProcessType.FILE
                                 val result = moveFile(
                                     currentFile!!,
                                     File("${negativePanelStates.path}/${currentFile!!.name}")
@@ -564,12 +563,12 @@ fun DialogContainer(
                                     refresh(scope, panelStates)
                                     refresh(scope, negativePanelStates)
                                 } else {
-                                    loadingType = LoadingType.FAIL
+                                    loadingType = FileProcessType.FAIL
                                 }
 
                             }
                         } else {
-                            loadingType = LoadingType.FAIL
+                            loadingType = FileProcessType.FAIL
                         }
                     }
                 ) {
@@ -1045,7 +1044,7 @@ fun DialogContainer(
                         val pkgInfo = if (isIn) pm.getPackageInfo(apkInfo.packageName, 0) else null
 
                         val packageInfo =
-                            PackageInfo(
+                            PackageData(
                                 name = apkInfo.applicationInfo!!.loadLabel(pm).toString(),
                                 uid = if (isIn) pkgInfo!!.applicationInfo!!.uid else null,
                                 versionName = apkInfo.versionName ?: "未知",
