@@ -194,7 +194,7 @@ fun MainScreen(
                 }
 
                 else -> {
-                    dialogManager.showOpenMode = true
+                    dialogManager.showOpenChooser = true
                 }
             }
         }
@@ -311,7 +311,7 @@ fun MainScreen(
                         style = MaterialTheme.typography.titleMedium
                     )
                     NavigationDrawerItem(
-                        label = { Text("软件提取") },
+                        label = { Text("已安装的应用") },
                         selected = false,
                         icon = {
                             Icon(
@@ -324,7 +324,7 @@ fun MainScreen(
                         }
                     )
                     NavigationDrawerItem(
-                        label = { Text("终端模拟") },
+                        label = { Text("终端") },
                         selected = false,
                         icon = {
                             Icon(

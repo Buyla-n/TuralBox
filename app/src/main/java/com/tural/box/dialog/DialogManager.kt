@@ -10,7 +10,7 @@ class DialogManager {
     var showTool by mutableStateOf(false)
     var showSort by mutableStateOf(false)
     var showAppDetail by mutableStateOf(false)
-    var showOpenMode by mutableStateOf(false)
+    var showOpenChooser by mutableStateOf(false)
     var showCopy by mutableStateOf(false)
     var showMove by mutableStateOf(false)
     var showDelete by mutableStateOf(false)
