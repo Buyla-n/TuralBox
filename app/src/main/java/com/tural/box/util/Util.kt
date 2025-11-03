@@ -9,8 +9,8 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import com.tural.box.R
-import com.tural.box.ui.FileType
-import com.tural.box.ui.SortOrder
+import com.tural.box.model.FileType
+import com.tural.box.ui.screen.main.SortOrder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

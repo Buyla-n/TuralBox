@@ -19,7 +19,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TuralBox">
         <activity
-            android:name=".MainActivity"
+            android:name=".activity.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.TuralBox">
             <intent-filter>
@@ -29,29 +29,29 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ImageActivity"
+            android:name=".activity.ImageActivity"
             android:exported="true" />
         <activity
-            android:name=".SettingsActivity"
+            android:name=".activity.SettingsActivity"
             android:exported="true" />
         <activity
-            android:name=".AppExtractActivity"
+            android:name=".activity.AppListActivity"
             android:exported="true" />
         <activity
-            android:name=".OpenSourceActivity"
+            android:name=".activity.LicensesActivity"
             android:exported="true" />
         <activity
-            android:name=".TextEditorActivity"
+            android:name=".activity.TextEditorActivity"
             android:exported="true" />
         <activity
-            android:name=".TerminalActivity"
+            android:name=".activity.TerminalActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustNothing"/>
         <activity
-            android:name=".FontActivity"
+            android:name=".activity.FontActivity"
             android:exported="true" />
         <activity
-            android:name=".VideoActivity"
+            android:name=".activity.VideoActivity"
             android:exported="true" />
         <provider
             android:name="androidx.core.content.FileProvider"
