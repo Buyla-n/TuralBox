@@ -79,6 +79,7 @@ import com.tural.box.dialog.DialogManager
 import com.tural.box.model.FileType
 import com.tural.box.model.PanelPosition
 import com.tural.box.util.RootPath
+import com.tural.box.util.accessCompressFile
 import com.tural.box.util.accessFiles
 import com.tural.box.util.getFileType
 import com.tural.box.util.isRootPath
@@ -127,10 +128,6 @@ fun MainScreen(
 
     fun handleBack() {
         val cps = currentPanelState()
-//        if (parseZipPath(cps.path.pathString).isEmpty() && cps.isInZip) {
-//            cps.isInZip = false
-//            cps.zipFile = null
-//        }
         if (!currentPath.isRootPath()) {
             cps.path = cps.path.parent
         }
@@ -540,7 +537,11 @@ fun MainScreen(
                     }
 
                     leftPanelState.files = withContext(Dispatchers.IO) {
-                        accessFiles(leftPanelState.path, leftPanelState.sortOrder)
+                        if (!leftPanelState.isInZip) {
+                            accessFiles(leftPanelState.path, leftPanelState.sortOrder)
+                        } else {
+                            accessCompressFile(leftPanelState.zipFile!!.absolutePath, leftPanelState.path.pathString, leftPanelState.sortOrder)
+                        }
                     }
 
                     scope.launch(Dispatchers.Main) {

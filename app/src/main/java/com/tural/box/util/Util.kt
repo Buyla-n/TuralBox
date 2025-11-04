@@ -26,6 +26,8 @@ import java.util.Date
 import java.util.Locale
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
+import kotlin.math.log10
+import kotlin.math.pow
 
 const val RootPath = "/storage/emulated/0"
 const val ExtractPath = "/storage/emulated/0/TuralBox/Extract"
@@ -104,11 +106,12 @@ fun formatSizeDetail(size: Long): String {
     if (size <= 0) return "0 B"
 
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (Math.log10(size.toDouble()) / Math.log10(1024.0)).toInt()
+    val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
 
     return String.format(
+        Locale.US,
         "%.1f %s (%d 字节)",
-        size / Math.pow(1024.0, digitGroups.toDouble()),
+        size / 1024.0.pow(digitGroups.toDouble()),
         units[digitGroups],
         size
     )
