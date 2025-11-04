@@ -3,7 +3,6 @@ package com.tural.box.dialog
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,12 +18,8 @@ import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -38,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,7 +41,6 @@ import com.tural.box.activity.LicensesActivity
 import com.tural.box.icons.AppIcon
 import com.tural.box.model.FileType
 import com.tural.box.model.PanelPosition
-import com.tural.box.model.SortOrder
 import com.tural.box.ui.screen.main.PanelStates
 import com.tural.box.util.formatFileDate
 import com.tural.box.util.getFileSize
@@ -72,6 +65,8 @@ fun DialogContainer(
     onFileClick: (File, FileType?) -> Unit
 ) {
     val currentFile = dialogManager.currentFile
+
+    //extract
     if (dialogManager.showTool) {
         FileToolDialog(dialogManager, currentPanel, currentFile!!, context)
     }
@@ -96,63 +91,26 @@ fun DialogContainer(
         }
     }
     if (dialogManager.showSort) {
-        var selectedSortOption by remember { mutableStateOf(SortOrder.NAME) } // 0=名称, 1=大小, 2=时间, 3=类型
-        selectedSortOption = panelStates.sortOrder
-
-        AlertDialog(
-            onDismissRequest = { dialogManager.showSort = false },
-            title = { Text("排序 ${if (currentPanel == PanelPosition.LEFT) "左" else "右"}") },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                ) {
-                    listOf(
-                        SortOrder.NAME to "名称排序",
-                        SortOrder.SIZE to "大小排序",
-                        SortOrder.TIME to "时间排序",
-                        SortOrder.TYPE to "类型排序"
-                    ).forEach { (order, text) ->
-                        ListItem(
-                            headlineContent = { Text(text) },
-                            leadingContent = {
-                                RadioButton(
-                                    selected = selectedSortOption == order,
-                                    onClick = { selectedSortOption = order }
-                                )
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { selectedSortOption = order }
-                                .padding(),
-                            colors = ListItemDefaults.colors(
-                                containerColor = Color.Transparent
-                            )
-                        )
-                        HorizontalDivider()
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        panelStates.sortOrder = selectedSortOption
-                        dialogManager.showSort = false
-                    }
-                ) {
-                    Text("确定")
-                }
-            },
-            dismissButton = {
-                FilledTonalButton(
-                    onClick = { dialogManager.showSort = false }
-                ) {
-                    Text("取消")
-                }
-            }
-        )
+        SortOrderDialog(dialogManager, panelStates, currentPanel)
     }
+    if (dialogManager.showSearch) {
+        SearchFileDialog(dialogManager, panelStates.path) {
+            panelStates.highLightFiles = setOf(it.name)
+            panelStates.path = Path(it.path)
+            dialogManager.showSearch = false
+        }
+    }
+    if (dialogManager.showAppDetail) {
+        ApkDetailDialog(dialogManager, context, currentFile!!)
+    }
+    if (dialogManager.showOpenChooser) {
+        OpenChooserDialog(dialogManager) { onFileClick(currentFile!!, it) }
+    }
+    if (dialogManager.showAudio) {
+        AudioPlayerDialog(dialogManager, currentFile!!)
+    }
+
+    //direct
     if (dialogManager.showPath) {
         val textFieldState = rememberTextFieldState(initialText = panelStates.path.pathString)
         AlertDialog(
@@ -259,16 +217,6 @@ fun DialogContainer(
             }
         )
     }
-    if (dialogManager.showSearch) {
-        SearchFileDialog(dialogManager, panelStates.path) {
-            panelStates.highLightFiles = setOf(it.name)
-            panelStates.path = Path(it.path)
-            dialogManager.showSearch = false
-        }
-    }
-    if (dialogManager.showAppDetail) {
-        ApkDetailDialog(dialogManager, context, currentFile!!)
-    }
     if (dialogManager.showAbout) {
         BasicAlertDialog(
             onDismissRequest = { dialogManager.showAbout = false },
@@ -328,12 +276,6 @@ fun DialogContainer(
                 }
             }
         )
-    }
-    if (dialogManager.showOpenChooser) {
-        OpenChooserDialog(dialogManager) { onFileClick(currentFile!!, it) }
-    }
-    if (dialogManager.showAudio) {
-        AudioPlayerDialog(dialogManager, currentFile!!)
     }
     if (dialogManager.showProperties) {
         val file = currentFile!!
